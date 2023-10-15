@@ -20,7 +20,7 @@ npm install @browserfs/fs-zip
 
 > 🛈 The examples are written in ESM. If you are using CJS, you can `require` the package. If running in a browser you can add a script tag to your HTML pointing to the `browser.min.js` and use BrowserFS Zip via the global `BrowserFS_Zip` object.
 
-You can use DOM backends, though you must register them if you plan on using `configure`:
+You can't use ZipFS on its own. You must import the core in order to use the backend, and must register it if you plan on using `configure`:
 
 ```js
 import { configure, fs, registerBackend } from '@browserfs/core';
