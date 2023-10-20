@@ -1,4 +1,5 @@
 import { extendedASCIIChars } from './constants.js';
+import { decode } from '@browserfs/core/utils.js';
 
 /**
  * Converts the input time and date in MS-DOS format into a JavaScript Date
@@ -27,12 +28,15 @@ export function msdos2date(time: number, date: number): Date {
  * exception).
  * @hidden
  */
-export function safeToString(buff: Buffer, useUTF8: boolean, start: number, length: number): string {
+export function safeToString(buff: ArrayBufferLike | ArrayBufferView, useUTF8: boolean, start: number, length: number): string {
 	if (length === 0) {
 		return '';
-	} else if (useUTF8) {
-		return buff.toString('utf8', start, start + length);
+	}
+
+	const uintArray = new Uint8Array('buffer' in buff ? buff.buffer : buff);
+	if (useUTF8) {
+		return decode(uintArray.slice(start, start + length));
 	} else {
-		return [...buff].map(char => (char > 127 ? extendedASCIIChars[char - 128] : String.fromCharCode(char))).join();
+		return [...uintArray].map(char => (char > 127 ? extendedASCIIChars[char - 128] : String.fromCharCode(char))).join();
 	}
 }

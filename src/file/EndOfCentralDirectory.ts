@@ -21,37 +21,39 @@ import { endOfCentralDirectoryMagic } from '../constants.js';
  */
 
 export class EndOfCentralDirectory {
-	constructor(private data: Buffer) {
-		if (this.data.readUInt32LE(0) !== endOfCentralDirectoryMagic) {
-			throw new ApiError(ErrorCode.EINVAL, `Invalid Zip file: End of central directory record has invalid signature: ${this.data.readUInt32LE(0)}`);
+	protected _view: DataView;
+	constructor(private data: ArrayBufferLike) {
+		this._view = new DataView(data);
+		if (this._view.getUint32(0, true) !== endOfCentralDirectoryMagic) {
+			throw new ApiError(ErrorCode.EINVAL, `Invalid Zip file: End of central directory record has invalid signature: ${this._view.getUint32(0, true)}`);
 		}
 	}
 	public diskNumber(): number {
-		return this.data.readUInt16LE(4);
+		return this._view.getUint16(4, true);
 	}
 	public cdDiskNumber(): number {
-		return this.data.readUInt16LE(6);
+		return this._view.getUint16(6, true);
 	}
 	public cdDiskEntryCount(): number {
-		return this.data.readUInt16LE(8);
+		return this._view.getUint16(8, true);
 	}
 	public cdTotalEntryCount(): number {
-		return this.data.readUInt16LE(10);
+		return this._view.getUint16(10, true);
 	}
 	public cdSize(): number {
-		return this.data.readUInt32LE(12);
+		return this._view.getUint32(12, true);
 	}
 	public cdOffset(): number {
-		return this.data.readUInt32LE(16);
+		return this._view.getUint32(16, true);
 	}
 	public cdZipCommentLength(): number {
-		return this.data.readUInt16LE(20);
+		return this._view.getUint16(20, true);
 	}
 	public cdZipComment(): string {
 		// Assuming UTF-8. The specification doesn't specify.
 		return safeToString(this.data, true, 22, this.cdZipCommentLength());
 	}
-	public rawCdZipComment(): Buffer {
+	public rawCdZipComment(): ArrayBuffer {
 		return this.data.slice(22, 22 + this.cdZipCommentLength());
 	}
 }

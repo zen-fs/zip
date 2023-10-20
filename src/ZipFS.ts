@@ -1,13 +1,13 @@
 import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
 import { FileIndex, IndexDirInode, IndexFileInode, isIndexDirInode, isIndexFileInode } from '@browserfs/core/FileIndex.js';
 import { CreateBackend, type BackendOptions } from '@browserfs/core/backends/backend.js';
-import { ActionType, File, FileFlag, NoSyncFile } from '@browserfs/core/file.js';
-import { FileSystemMetadata, SynchronousFileSystem } from '@browserfs/core/filesystem.js';
+import { ActionType, FileFlag, NoSyncFile } from '@browserfs/core/file.js';
+import { FileContents, FileSystemMetadata, SynchronousFileSystem } from '@browserfs/core/filesystem.js';
 import { Stats } from '@browserfs/core/stats.js';
-import { Buffer } from 'buffer';
 import { CentralDirectory } from './file/CentralDirectory.js';
 import { EndOfCentralDirectory } from './file/EndOfCentralDirectory.js';
 import { TableOfContents } from './file/TableOfContents.js';
+import { decode } from '@browserfs/core/utils.js';
 
 export namespace ZipFS {
 	/**
@@ -17,7 +17,7 @@ export namespace ZipFS {
 		/**
 		 * The zip file as a binary buffer.
 		 */
-		zipData: Buffer;
+		zipData: ArrayBufferLike;
 		/**
 		 * The name of the zip file (optional).
 		 */
@@ -37,9 +37,9 @@ export namespace ZipFS {
  * strings. Furthermore, these libraries duplicate functionality already present
  * in BrowserFS (e.g. UTF-8 decoding and binary data manipulation).
  *
- * This filesystem takes advantage of BrowserFS's Buffer implementation, which
- * efficiently represents the zip file in memory (in both ArrayBuffer-enabled
- * browsers *and* non-ArrayBuffer browsers), and which can neatly be 'sliced'
+ * This filesystem takes advantage of BrowserFS's Uint8Array implementation, which
+ * efficiently represents the zip file in memory (in both ArrayUint8Array-enabled
+ * browsers *and* non-ArrayUint8Array browsers), and which can neatly be 'sliced'
  * without copying data. Each struct defined in the standard is represented with
  * a buffer slice pointing to an offset in the zip file, and has getters for
  * each field. As we anticipate that this data will not be read often, we choose
@@ -72,10 +72,10 @@ export class ZipFS extends SynchronousFileSystem {
 	public static readonly Options: BackendOptions = {
 		zipData: {
 			type: 'object',
-			description: 'The zip file as a Buffer object.',
+			description: 'The zip file as a Uint8Array object.',
 			validator(buff: unknown) {
-				if (!Buffer.isBuffer(buff)) {
-					throw new ApiError(ErrorCode.EINVAL, 'option must be a Buffer.');
+				if (!(buff instanceof Uint8Array)) {
+					throw new ApiError(ErrorCode.EINVAL, 'option must be a Uint8Array.');
 				}
 			},
 		},
@@ -94,7 +94,8 @@ export class ZipFS extends SynchronousFileSystem {
 	 * Locates the end of central directory record at the end of the file.
 	 * Throws an exception if it cannot be found.
 	 */
-	private static _getEOCD(data: Buffer): EndOfCentralDirectory {
+	private static _getEOCD(data: ArrayBufferLike): EndOfCentralDirectory {
+		const view = new DataView(data);
 		// Unfortunately, the comment is variable size and up to 64K in size.
 		// We assume that the magic signature does not appear in the comment, and
 		// in the bytes between the comment and the signature. Other ZIP
@@ -102,13 +103,13 @@ export class ZipFS extends SynchronousFileSystem {
 		// read thread every entry in the file to get to it. :(
 		// These are *negative* offsets from the end of the file.
 		const startOffset = 22;
-		const endOffset = Math.min(startOffset + 0xffff, data.length - 1);
+		const endOffset = Math.min(startOffset + 0xffff, data.byteLength - 1);
 		// There's not even a byte alignment guarantee on the comment so we need to
 		// search byte by byte. *grumble grumble*
 		for (let i = startOffset; i < endOffset; i++) {
 			// Magic number: EOCD Signature
-			if (data.readUInt32LE(data.length - i) === 0x06054b50) {
-				return new EndOfCentralDirectory(data.subarray(data.length - i));
+			if (view.getUint32(data.byteLength - i, true) === 0x06054b50) {
+				return new EndOfCentralDirectory(data.slice(view.byteLength - i));
 			}
 		}
 		throw new ApiError(ErrorCode.EINVAL, 'Invalid ZIP file: Could not locate End of Central Directory signature.');
@@ -123,7 +124,7 @@ export class ZipFS extends SynchronousFileSystem {
 		}
 		// XXX: For the file index, strip the trailing '/'.
 		if (filename.charAt(filename.length - 1) === '/') {
-			filename = filename.substr(0, filename.length - 1);
+			filename = filename.slice(0, filename.length - 1);
 		}
 
 		if (cd.isDirectory()) {
@@ -133,7 +134,7 @@ export class ZipFS extends SynchronousFileSystem {
 		}
 	}
 
-	private static async _computeIndex(data: Buffer): Promise<TableOfContents> {
+	private static async _computeIndex(data: ArrayBufferLike): Promise<TableOfContents> {
 		const index: FileIndex<CentralDirectory> = new FileIndex<CentralDirectory>();
 		const eocd: EndOfCentralDirectory = ZipFS._getEOCD(data);
 		if (eocd.diskNumber() !== eocd.cdDiskNumber()) {
@@ -149,7 +150,7 @@ export class ZipFS extends SynchronousFileSystem {
 	}
 
 	private static async _computeIndexResponsive(
-		data: Buffer,
+		data: ArrayBufferLike,
 		index: FileIndex<CentralDirectory>,
 		cdPtr: number,
 		cdEnd: number,
@@ -162,7 +163,7 @@ export class ZipFS extends SynchronousFileSystem {
 
 		let count = 0;
 		while (count++ < 200 && cdPtr < cdEnd) {
-			const cd: CentralDirectory = new CentralDirectory(data, data.subarray(cdPtr));
+			const cd: CentralDirectory = new CentralDirectory(data, data.slice(cdPtr));
 			ZipFS._addToIndex(cd, index);
 			cdPtr += cd.totalSize();
 			cdEntries.push(cd);
@@ -174,7 +175,7 @@ export class ZipFS extends SynchronousFileSystem {
 	private _index: FileIndex<CentralDirectory> = new FileIndex<CentralDirectory>();
 	private _directoryEntries: CentralDirectory[] = [];
 	private _eocd: EndOfCentralDirectory | null = null;
-	private data: Buffer;
+	private data: ArrayBufferLike;
 	public readonly name: string;
 
 	public constructor({ zipData, name = '' }: ZipFS.Options) {
@@ -195,7 +196,7 @@ export class ZipFS extends SynchronousFileSystem {
 			name: ZipFS.Name + (this.name !== '' ? ` ${this.name}` : ''),
 			readonly: true,
 			synchronous: true,
-			totalSpace: this.data.length,
+			totalSpace: this.data.byteLength,
 		};
 	}
 
@@ -249,7 +250,7 @@ export class ZipFS extends SynchronousFileSystem {
 		return stats;
 	}
 
-	public openSync(path: string, flags: FileFlag, mode: number): File {
+	public openSync(path: string, flags: FileFlag, mode: number): NoSyncFile<this> {
 		// INVARIANT: Cannot write to RO file systems.
 		if (flags.isWriteable()) {
 			throw new ApiError(ErrorCode.EPERM, path);
@@ -290,16 +291,15 @@ export class ZipFS extends SynchronousFileSystem {
 	/**
 	 * Specially-optimized readfile.
 	 */
-	public readFileSync(fname: string, encoding: BufferEncoding, flag: FileFlag): any {
+	public readFileSync(fname: string, encoding: BufferEncoding, flag: FileFlag): FileContents {
 		// Get file.
 		const fd = this.openSync(fname, flag, 0o644);
 		try {
-			const fdCast = <NoSyncFile<ZipFS>>fd;
-			const fdBuff = <Buffer>fdCast.getBuffer();
+			const data = fd.getBuffer();
 			if (encoding === null) {
-				return Buffer.from(fdBuff);
+				return data;
 			}
-			return fdBuff.toString(encoding);
+			return decode(data);
 		} finally {
 			fd.closeSync();
 		}

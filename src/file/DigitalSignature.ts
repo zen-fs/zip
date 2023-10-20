@@ -19,15 +19,17 @@ import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
  */
 
 export class DigitalSignature {
-	constructor(private data: Buffer) {
-		if (this.data.readUInt32LE(0) !== 84233040) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid digital signature signature: ' + this.data.readUInt32LE(0));
+	protected _view: DataView;
+	constructor(private data: ArrayBufferLike) {
+		this._view = new DataView(data);
+		if (this._view.getUint32(0, true) !== 84233040) {
+			throw new ApiError(ErrorCode.EINVAL, 'Invalid digital signature signature: ' + this._view.getUint32(0, true));
 		}
 	}
 	public size(): number {
-		return this.data.readUInt16LE(4);
+		return this._view.getUint16(4, true);
 	}
-	public signatureData(): Buffer {
-		return this.data.subarray(6, 6 + this.size());
+	public signatureData(): ArrayBuffer {
+		return this.data.slice(6, 6 + this.size());
 	}
 }

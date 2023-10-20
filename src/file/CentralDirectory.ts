@@ -34,61 +34,63 @@ import { FileHeader } from './Header.js';
 export class CentralDirectory {
 	// Optimization: The filename is frequently read, so stash it here.
 	private _filename: string;
-	constructor(private zipData: Buffer, private data: Buffer) {
+	protected _view: DataView;
+	constructor(private zipData: ArrayBufferLike, private data: ArrayBufferLike) {
+		this._view = new DataView(data);
 		// Sanity check.
-		if (this.data.readUInt32LE(0) !== 33639248) {
-			throw new ApiError(ErrorCode.EINVAL, `Invalid Zip file: Central directory record has invalid signature: ${this.data.readUInt32LE(0)}`);
+		if (this._view.getUint32(0, true) !== 33639248) {
+			throw new ApiError(ErrorCode.EINVAL, `Invalid Zip file: Central directory record has invalid signature: ${this._view.getUint32(0, true)}`);
 		}
 		this._filename = this.produceFilename();
 	}
 	public versionMadeBy(): number {
-		return this.data.readUInt16LE(4);
+		return this._view.getUint16(4, true);
 	}
 	public versionNeeded(): number {
-		return this.data.readUInt16LE(6);
+		return this._view.getUint16(6, true);
 	}
 	public flag(): number {
-		return this.data.readUInt16LE(8);
+		return this._view.getUint16(8, true);
 	}
 	public compressionMethod(): CompressionMethod {
-		return this.data.readUInt16LE(10);
+		return this._view.getUint16(10, true);
 	}
 	public lastModFileTime(): Date {
 		// Time and date is in MS-DOS format.
-		return msdos2date(this.data.readUInt16LE(12), this.data.readUInt16LE(14));
+		return msdos2date(this._view.getUint16(12, true), this._view.getUint16(14, true));
 	}
 	public rawLastModFileTime(): number {
-		return this.data.readUInt32LE(12);
+		return this._view.getUint32(12, true);
 	}
 	public crc32(): number {
-		return this.data.readUInt32LE(16);
+		return this._view.getUint32(16, true);
 	}
 	public compressedSize(): number {
-		return this.data.readUInt32LE(20);
+		return this._view.getUint32(20, true);
 	}
 	public uncompressedSize(): number {
-		return this.data.readUInt32LE(24);
+		return this._view.getUint32(24, true);
 	}
 	public fileNameLength(): number {
-		return this.data.readUInt16LE(28);
+		return this._view.getUint16(28, true);
 	}
 	public extraFieldLength(): number {
-		return this.data.readUInt16LE(30);
+		return this._view.getUint16(30, true);
 	}
 	public fileCommentLength(): number {
-		return this.data.readUInt16LE(32);
+		return this._view.getUint16(32, true);
 	}
 	public diskNumberStart(): number {
-		return this.data.readUInt16LE(34);
+		return this._view.getUint16(34, true);
 	}
 	public internalAttributes(): number {
-		return this.data.readUInt16LE(36);
+		return this._view.getUint16(36, true);
 	}
 	public externalAttributes(): number {
-		return this.data.readUInt32LE(38);
+		return this._view.getUint32(38, true);
 	}
 	public headerRelativeOffset(): number {
-		return this.data.readUInt32LE(42);
+		return this._view.getUint32(42, true);
 	}
 	public produceFilename(): string {
 		/*
@@ -110,20 +112,20 @@ export class CentralDirectory {
 	public fileName(): string {
 		return this._filename;
 	}
-	public rawFileName(): Buffer {
-		return this.data.subarray(46, 46 + this.fileNameLength());
+	public rawFileName(): ArrayBuffer {
+		return this.data.slice(46, 46 + this.fileNameLength());
 	}
-	public extraField(): Buffer {
+	public extraField(): ArrayBuffer {
 		const start = 44 + this.fileNameLength();
-		return this.data.subarray(start, start + this.extraFieldLength());
+		return this.data.slice(start, start + this.extraFieldLength());
 	}
 	public fileComment(): string {
 		const start = 46 + this.fileNameLength() + this.extraFieldLength();
 		return safeToString(this.data, this.useUTF8(), start, this.fileCommentLength());
 	}
-	public rawFileComment(): Buffer {
+	public rawFileComment(): ArrayBuffer {
 		const start = 46 + this.fileNameLength() + this.extraFieldLength();
-		return this.data.subarray(start, start + this.fileCommentLength());
+		return this.data.slice(start, start + this.fileCommentLength());
 	}
 	public totalSize(): number {
 		return 46 + this.fileNameLength() + this.extraFieldLength() + this.fileCommentLength();
@@ -153,13 +155,13 @@ export class CentralDirectory {
 		// Need to grab the header before we can figure out where the actual
 		// compressed data starts.
 		const start = this.headerRelativeOffset();
-		const header = new FileHeader(this.zipData.subarray(start));
-		return new Data(header, this, this.zipData.subarray(start + header.totalSize()));
+		const header = new FileHeader(this.zipData.slice(start));
+		return new Data(header, this, this.zipData.slice(start + header.totalSize()));
 	}
-	public getData(): Buffer {
+	public getData(): Uint8Array {
 		return this.getFileData().decompress();
 	}
-	public getRawData(): Buffer {
+	public getRawData(): ArrayBuffer {
 		return this.getFileData().getRawData();
 	}
 	public getStats(): Stats {

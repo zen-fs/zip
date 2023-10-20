@@ -26,15 +26,17 @@ import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
  */
 
 export class ArchiveExtraDataRecord {
-	constructor(private data: Buffer) {
-		if (this.data.readUInt32LE(0) !== 134630224) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid archive extra data record signature: ' + this.data.readUInt32LE(0));
+	protected _view: DataView;
+	constructor(private data: ArrayBufferLike) {
+		this._view = new DataView(data);
+		if (this._view.getUint32(0, true) !== 134630224) {
+			throw new ApiError(ErrorCode.EINVAL, 'Invalid archive extra data record signature: ' + this._view.getUint32(0, true));
 		}
 	}
 	public length(): number {
-		return this.data.readUInt32LE(4);
+		return this._view.getUint32(4, true);
 	}
-	public extraFieldData(): Buffer {
-		return this.data.subarray(8, 8 + this.length());
+	public extraFieldData(): ArrayBuffer {
+		return this.data.slice(8, 8 + this.length());
 	}
 }

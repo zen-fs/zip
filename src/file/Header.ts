@@ -47,29 +47,31 @@ import { msdos2date, safeToString } from '../utils.js';
  *    extra field (variable size)
  */
 export class FileHeader {
-	constructor(private data: Buffer) {
-		if (data.readUInt32LE(0) !== 67324752) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this.data.readUInt32LE(0));
+	protected _view: DataView;
+	constructor(private data: ArrayBufferLike) {
+		this._view = new DataView(data);
+		if (this._view.getUint32(0, true) !== 67324752) {
+			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this._view.getUint32(0, true));
 		}
 	}
 	public versionNeeded(): number {
-		return this.data.readUInt16LE(4);
+		return this._view.getUint16(4, true);
 	}
 	public flags(): number {
-		return this.data.readUInt16LE(6);
+		return this._view.getUint16(6, true);
 	}
 	public compressionMethod(): CompressionMethod {
-		return this.data.readUInt16LE(8);
+		return this._view.getUint16(8, true);
 	}
 	public lastModFileTime(): Date {
 		// Time and date is in MS-DOS format.
-		return msdos2date(this.data.readUInt16LE(10), this.data.readUInt16LE(12));
+		return msdos2date(this._view.getUint16(10, true), this._view.getUint16(12, true));
 	}
 	public rawLastModFileTime(): number {
-		return this.data.readUInt32LE(10);
+		return this._view.getUint32(10, true);
 	}
 	public crc32(): number {
-		return this.data.readUInt32LE(14);
+		return this._view.getUint32(14, true);
 	}
 	/**
 	 * These two values are COMPLETELY USELESS.
@@ -82,20 +84,20 @@ export class FileHeader {
 	 *
 	 * So we'll just use the central directory's values.
 	 */
-	// public compressedSize(): number { return this.data.readUInt32LE(18); }
-	// public uncompressedSize(): number { return this.data.readUInt32LE(22); }
+	// public compressedSize(): number { return this._view.getUint32(18, true); }
+	// public uncompressedSize(): number { return this._view.getUint32(22, true); }
 	public fileNameLength(): number {
-		return this.data.readUInt16LE(26);
+		return this._view.getUint16(26, true);
 	}
 	public extraFieldLength(): number {
-		return this.data.readUInt16LE(28);
+		return this._view.getUint16(28, true);
 	}
 	public fileName(): string {
 		return safeToString(this.data, this.useUTF8(), 30, this.fileNameLength());
 	}
-	public extraField(): Buffer {
+	public extraField(): ArrayBuffer {
 		const start = 30 + this.fileNameLength();
-		return this.data.subarray(start, start + this.extraFieldLength());
+		return this.data.slice(start, start + this.extraFieldLength());
 	}
 	public totalSize(): number {
 		return 30 + this.fileNameLength() + this.extraFieldLength();

@@ -18,20 +18,22 @@ import { FileHeader as Header } from './Header.js';
  *   contain no content MUST not include file data.
  */
 export class Data {
-	constructor(private header: Header, private record: CentralDirectory, private data: Buffer) {}
-	public decompress(): Buffer {
+	protected _view: DataView;
+	constructor(private header: Header, private record: CentralDirectory, private data: ArrayBufferLike) {
+		this._view = new DataView(data);
+	}
+	public decompress(): Uint8Array {
 		// Check the compression
 		const compressionMethod: CompressionMethod = this.header.compressionMethod();
-		const fcn = decompressionMethods[compressionMethod];
-		if (fcn) {
-			return fcn(this.data, this.record.compressedSize(), this.record.uncompressedSize(), this.record.flag());
-		} else {
+		const decompress = decompressionMethods[compressionMethod];
+		if (typeof decompress != 'function') {
 			let name: string = CompressionMethod[compressionMethod];
 			if (!name) {
-				name = `Unknown: ${compressionMethod}`;
+				name = 'Unknown: ' + compressionMethod;
 			}
 			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${this.header.fileName()}': ${name}`);
 		}
+		return decompress(this.data, this.record.compressedSize(), this.record.uncompressedSize(), this.record.flag());
 	}
 	public getHeader(): Header {
 		return this.header;
@@ -39,7 +41,7 @@ export class Data {
 	public getRecord(): CentralDirectory {
 		return this.record;
 	}
-	public getRawData(): Buffer {
+	public getRawData(): ArrayBuffer {
 		return this.data;
 	}
 }
