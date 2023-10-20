@@ -25,11 +25,10 @@ You can't use ZipFS on its own. You must import the core in order to use the bac
 ```js
 import { configure, fs, registerBackend } from '@browserfs/core';
 import { ZipFS } from '@browserfs/fs-zip';
-import { Buffer } from 'buffer'; // not needed on Node
 registerBackend(ZipFS);
 
 const res = await fetch('http://example.com/archive.zip');
-const zipData = Buffer.from(await res.arrayBuffer());
+const zipData = await res.arrayBuffer();
 
 await configure({ '/mnt/zip': { fs: 'ZipFS', options: { zipData } } });
 
