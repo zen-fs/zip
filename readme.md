@@ -6,7 +6,7 @@ Please read the BrowserFS documentation!
 
 ## Backend
 
-This package adds the `ZipFS`, which allows you to create a *readonly* file system from a zip file.
+This package adds `ZipFS`, which allows you to create a *readonly* file system from a zip file.
 
 For more information, see the [API documentation](https://browser-fs.github.io/fs-zip).
 
