@@ -1,5 +1,5 @@
 {
-	"name": "@browserfs/fs-zip",
+	"name": "@browserfs/zip",
 	"version": "0.0.2",
 	"description": "Zip backend for BrowserFS",
 	"main": "dist/index.js",
@@ -10,15 +10,15 @@
 		"storage"
 	],
 	"type": "module",
-	"homepage": "https://github.com/browser-fs/fs-zip",
+	"homepage": "https://github.com/browser-fs/zip",
 	"author": "dr-vortex <jp@drvortex.dev>",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/browser-fs/fs-zip.git"
+		"url": "git+https://github.com/browser-fs/zip.git"
 	},
 	"bugs": {
-		"url": "https://github.com/browser-fs/fs-zip/issues"
+		"url": "https://github.com/browser-fs/zip/issues"
 	},
 	"engines": {
 		"node": ">= 18"

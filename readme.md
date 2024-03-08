@@ -8,12 +8,12 @@ Please read the BrowserFS documentation!
 
 This package adds `ZipFS`, which allows you to create a *readonly* file system from a zip file.
 
-For more information, see the [API documentation](https://browser-fs.github.io/fs-zip).
+For more information, see the [API documentation](https://browser-fs.github.io/zip).
 
 ## Installing
 
 ```sh
-npm install @browserfs/fs-zip
+npm install @browserfs/zip
 ```
 
 ## Usage
@@ -24,7 +24,7 @@ You can't use ZipFS on its own. You must import the core in order to use the bac
 
 ```js
 import { configure, fs, registerBackend } from '@browserfs/core';
-import { ZipFS } from '@browserfs/fs-zip';
+import { ZipFS } from '@browserfs/zip';
 registerBackend(ZipFS);
 
 const res = await fetch('http://example.com/archive.zip');
