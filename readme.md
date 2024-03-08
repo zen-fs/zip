@@ -8,12 +8,12 @@ Please read the BrowserFS documentation!
 
 This package adds `IsoFS`, which allows you to create a *readonly* file system from a iso file.
 
-For more information, see the [API documentation](https://browser-fs.github.io/fs-iso).
+For more information, see the [API documentation](https://browser-fs.github.io/iso).
 
 ## Installing
 
 ```sh
-npm install @browserfs/fs-iso
+npm install @browserfs/iso
 ```
 
 ## Usage
@@ -24,7 +24,7 @@ You can't use IsoFS on its own. You must import the core in order to use the bac
 
 ```js
 import { configure, fs, registerBackend } from '@browserfs/core';
-import { IsoFS } from '@browserfs/fs-iso';
+import { IsoFS } from '@browserfs/iso';
 registerBackend(IsoFS);
 
 const res = await fetch('http://example.com/image.iso');

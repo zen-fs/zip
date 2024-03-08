@@ -1,5 +1,5 @@
 {
-	"name": "@browserfs/fs-iso",
+	"name": "@browserfs/iso",
 	"version": "0.0.2",
 	"description": "Zip backend for BrowserFS",
 	"main": "dist/index.js",
@@ -10,15 +10,15 @@
 		"storage"
 	],
 	"type": "module",
-	"homepage": "https://github.com/browser-fs/fs-iso",
+	"homepage": "https://github.com/browser-fs/iso",
 	"author": "dr-vortex <jp@drvortex.dev>",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/browser-fs/fs-iso.git"
+		"url": "git+https://github.com/browser-fs/iso.git"
 	},
 	"bugs": {
-		"url": "https://github.com/browser-fs/fs-iso/issues"
+		"url": "https://github.com/browser-fs/iso/issues"
 	},
 	"engines": {
 		"node": ">= 18"
