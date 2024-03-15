@@ -1,7 +1,8 @@
 import { decode } from '@browserfs/core/utils.js';
 
 export function getASCIIString(data: ArrayBuffer, startIndex: number, length: number) {
-	return decode(data.slice(startIndex, startIndex + length));
+	const buffer = data.slice(startIndex, startIndex + length);
+	return decode(new Uint8Array(buffer));
 }
 export function getJolietString(data: ArrayBuffer, startIndex: number, length: number): string {
 	if (length === 1) {

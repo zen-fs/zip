@@ -14,10 +14,10 @@ export abstract class DirectoryRecord {
 		this._view = new DataView(data);
 		this._rockRidgeOffset = rockRidgeOffset;
 	}
-	public hasRockRidge(): boolean {
+	public get hasRockRidge(): boolean {
 		return this._rockRidgeOffset > -1;
 	}
-	public getRockRidgeOffset(): number {
+	public get rockRidgeOffset(): number {
 		return this._rockRidgeOffset;
 	}
 	/**
@@ -32,44 +32,44 @@ export abstract class DirectoryRecord {
 			this._fileOrDir = null;
 		}
 	}
-	public length(): number {
+	public get length(): number {
 		return this._view[0];
 	}
-	public extendedAttributeRecordLength(): number {
+	public get extendedAttributeRecordLength(): number {
 		return this._view[1];
 	}
-	public lba(): number {
+	public get lba(): number {
 		return this._view.getUint32(2, true) * 2048;
 	}
-	public dataLength(): number {
+	public get dataLength(): number {
 		return this._view.getUint32(10, true);
 	}
-	public recordingDate(): Date {
+	public get recordingDate(): Date {
 		return getShortFormDate(this.data, 18);
 	}
-	public fileFlags(): number {
+	public get fileFlags(): number {
 		return this._view[25];
 	}
-	public fileUnitSize(): number {
+	public get fileUnitSize(): number {
 		return this._view[26];
 	}
-	public interleaveGapSize(): number {
+	public get interleaveGapSize(): number {
 		return this._view[27];
 	}
-	public volumeSequenceNumber(): number {
+	public get volumeSequenceNumber(): number {
 		return this._view.getUint16(28, true);
 	}
-	public identifier(): string {
+	public get identifier(): string {
 		return this._getString(33, this._view[32]);
 	}
 	public fileName(isoData: ArrayBuffer): string {
-		if (this.hasRockRidge()) {
+		if (this.hasRockRidge) {
 			const fn = this._rockRidgeFilename(isoData);
-			if (fn !== null) {
+			if (fn != null) {
 				return fn;
 			}
 		}
-		const ident = this.identifier();
+		const ident = this.identifier;
 		if (this.isDirectory(isoData)) {
 			return ident;
 		}
@@ -79,28 +79,27 @@ export abstract class DirectoryRecord {
 		// Gets expanded to two-byte char in Unicode directory records.
 		const versionSeparator = ident.indexOf(';');
 		if (versionSeparator === -1) {
-			// Some Joliet filenames lack the version separator, despite the standard
-			// specifying that it should be there.
+			// Some Joliet filenames lack the version separator, despite the standard specifying that it should be there.
 			return ident;
-		} else if (ident[versionSeparator - 1] === '.') {
+		}
+		if (ident[versionSeparator - 1] === '.') {
 			// Empty extension. Do not include '.' in the filename.
 			return ident.slice(0, versionSeparator - 1);
-		} else {
-			// Include up to version separator.
-			return ident.slice(0, versionSeparator);
 		}
+		// Include up to version separator.
+		return ident.slice(0, versionSeparator);
 	}
 	public isDirectory(isoData: ArrayBuffer): boolean {
-		let rv = !!(this.fileFlags() & FileFlags.Directory);
+		let rv = !!(this.fileFlags & FileFlags.Directory);
 		// If it lacks the Directory flag, it may still be a directory if we've exceeded the directory
 		// depth limit. Rock Ridge marks these as files and adds a special attribute.
-		if (!rv && this.hasRockRidge()) {
+		if (!rv && this.hasRockRidge) {
 			rv = this.getSUEntries(isoData).filter(e => e instanceof CLEntry).length > 0;
 		}
 		return rv;
 	}
 	public isSymlink(isoData: ArrayBuffer): boolean {
-		return this.hasRockRidge() && this.getSUEntries(isoData).filter(e => e instanceof SLEntry).length > 0;
+		return this.hasRockRidge && this.getSUEntries(isoData).filter(e => e instanceof SLEntry).length > 0;
 	}
 	public getSymlinkPath(isoData: ArrayBuffer): string {
 		let p = '';
@@ -142,7 +141,7 @@ export abstract class DirectoryRecord {
 			throw new Error(`Tried to get a File from a directory.`);
 		}
 		if (this._fileOrDir === null) {
-			this._fileOrDir = isoData.slice(this.lba(), this.lba() + this.dataLength());
+			this._fileOrDir = isoData.slice(this.lba, this.lba + this.dataLength);
 		}
 		return <ArrayBuffer>this._fileOrDir;
 	}
@@ -186,7 +185,7 @@ export abstract class DirectoryRecord {
 			i++;
 		}
 		i += this._rockRidgeOffset;
-		this._suEntries = constructSystemUseEntries(this.data, i, this.length(), isoData);
+		this._suEntries = constructSystemUseEntries(this.data, i, this.length, isoData);
 	}
 	/**
 	 * !!ONLY VALID ON FIRST ENTRY OF ROOT DIRECTORY!!

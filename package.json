@@ -45,6 +45,6 @@
 		"typescript": "5.2.2"
 	},
 	"peerDependencies": {
-		"@browserfs/core": "^0.1.0"
+		"@browserfs/core": "^0.2.2"
 	}
 }

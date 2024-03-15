@@ -8,9 +8,9 @@ export abstract class Directory<T extends DirectoryRecord> {
 	private _fileMap: { [name: string]: T } = {};
 	constructor(record: T, isoData: ArrayBuffer) {
 		this._record = record;
-		let i = record.lba();
-		let iLimit = i + record.dataLength();
-		if (!(record.fileFlags() & FileFlags.Directory)) {
+		let i = record.lba;
+		let iLimit = i + record.dataLength;
+		if (!(record.fileFlags & FileFlags.Directory)) {
 			// Must have a CL entry.
 			const cl = <CLEntry>record.getSUEntries(isoData).filter(e => e instanceof CLEntry)[0];
 			i = cl.childDirectoryLba() * 2048;
@@ -31,15 +31,15 @@ export abstract class Directory<T extends DirectoryRecord> {
 			// Skip '.' and '..' entries.
 			if (fname !== '\u0000' && fname !== '\u0001') {
 				// Skip relocated entries.
-				if (!r.hasRockRidge() || r.getSUEntries(isoData).filter(e => e instanceof REEntry).length === 0) {
+				if (!r.hasRockRidge || r.getSUEntries(isoData).filter(e => e instanceof REEntry).length === 0) {
 					this._fileMap[fname] = r;
 					this._fileList.push(fname);
 				}
 			} else if (iLimit === Infinity) {
 				// First entry contains needed data.
-				iLimit = i + r.dataLength();
+				iLimit = i + r.dataLength;
 			}
-			i += r.length();
+			i += r.length;
 		}
 	}
 	/**
@@ -49,11 +49,11 @@ export abstract class Directory<T extends DirectoryRecord> {
 	public getRecord(name: string): DirectoryRecord {
 		return this._fileMap[name];
 	}
-	public getFileList(): string[] {
+	public get fileList(): string[] {
 		return this._fileList;
 	}
 	public getDotEntry(isoData: ArrayBuffer): T {
-		return this._constructDirectoryRecord(isoData.slice(this._record.lba()));
+		return this._constructDirectoryRecord(isoData.slice(this._record.lba));
 	}
 	protected abstract _constructDirectoryRecord(data: ArrayBuffer): T;
 }
@@ -62,7 +62,7 @@ export class ISODirectory extends Directory<ISODirectoryRecord> {
 		super(record, isoData);
 	}
 	protected _constructDirectoryRecord(data: ArrayBuffer): ISODirectoryRecord {
-		return new ISODirectoryRecord(data, this._record.getRockRidgeOffset());
+		return new ISODirectoryRecord(data, this._record.rockRidgeOffset);
 	}
 }
 
@@ -71,6 +71,6 @@ export class JolietDirectory extends Directory<JolietDirectoryRecord> {
 		super(record, isoData);
 	}
 	protected _constructDirectoryRecord(data: ArrayBuffer): JolietDirectoryRecord {
-		return new JolietDirectoryRecord(data, this._record.getRockRidgeOffset());
+		return new JolietDirectoryRecord(data, this._record.rockRidgeOffset);
 	}
 }

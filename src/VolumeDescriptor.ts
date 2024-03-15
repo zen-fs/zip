@@ -68,11 +68,11 @@ export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescr
 		return this._view.getUint32(152);
 	}
 	public rootDirectoryEntry(isoData: ArrayBuffer): DirectoryRecord {
-		if (this._root === null) {
-			this._root = this._constructRootDirectoryRecord(this._data.slice(156));
-			this._root.rootCheckForRockRidge(isoData);
+		if (this._root) {
+			return this._root;
 		}
-		return this._root;
+		this._root = this._constructRootDirectoryRecord(this._data.slice(156));
+		this._root.rootCheckForRockRidge(isoData);
 	}
 	public volumeSetIdentifier(): string {
 		return this._getString(190, 128);
