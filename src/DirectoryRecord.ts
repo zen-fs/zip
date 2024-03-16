@@ -60,7 +60,7 @@ export abstract class DirectoryRecord {
 		return this._view.getUint16(28, true);
 	}
 	public get identifier(): string {
-		return this._getString(33, this._view[32]);
+		return this._getString(this.data, 33, this._view[32]);
 	}
 	public fileName(isoData: ArrayBuffer): string {
 		if (this.hasRockRidge) {
@@ -104,12 +104,11 @@ export abstract class DirectoryRecord {
 	public getSymlinkPath(isoData: ArrayBuffer): string {
 		let p = '';
 		const entries = this.getSUEntries(isoData);
-		const getStr = this._getGetString();
 		for (const entry of entries) {
 			if (entry instanceof SLEntry) {
-				const components = entry.componentRecords();
+				const components = entry.componentRecords;
 				for (const component of components) {
-					const flags = component.flags();
+					const flags = component.flags;
 					if (flags & SLComponentFlags.CURRENT) {
 						p += './';
 					} else if (flags & SLComponentFlags.PARENT) {
@@ -117,13 +116,13 @@ export abstract class DirectoryRecord {
 					} else if (flags & SLComponentFlags.ROOT) {
 						p += '/';
 					} else {
-						p += component.content(getStr);
+						p += component.content(this._getString);
 						if (!(flags & SLComponentFlags.CONTINUE)) {
 							p += '/';
 						}
 					}
 				}
-				if (!entry.continueFlag()) {
+				if (!entry.continueFlag) {
 					// We are done with this link.
 					break;
 				}
@@ -160,8 +159,10 @@ export abstract class DirectoryRecord {
 		}
 		return this._suEntries!;
 	}
-	protected abstract _getString(i: number, len: number): string;
-	protected abstract _getGetString(): TGetString;
+	protected getString(i: number, len: number): string {
+		return this._getString(this.data, i, len);
+	}
+	protected abstract _getString: TGetString;
 	protected abstract _constructDirectory(isoData: ArrayBuffer): Directory<DirectoryRecord>;
 	protected _rockRidgeFilename(isoData: ArrayBuffer): string | null {
 		const nmEntries = <NMEntry[]>this.getSUEntries(isoData).filter(e => e instanceof NMEntry);
@@ -169,9 +170,8 @@ export abstract class DirectoryRecord {
 			return null;
 		}
 		let str = '';
-		const getString = this._getGetString();
 		for (const e of nmEntries) {
-			str += e.name(getString);
+			str += e.name(this._getString);
 			if (!(e.flags() & NMFlags.CONTINUE)) {
 				break;
 			}
@@ -220,13 +220,10 @@ export class ISODirectoryRecord extends DirectoryRecord {
 	constructor(data: ArrayBuffer, rockRidgeOffset: number) {
 		super(data, rockRidgeOffset);
 	}
-	protected _getString(i: number, len: number): string {
-		return getASCIIString(this.data, i, len);
-	}
 	protected _constructDirectory(isoData: ArrayBuffer): Directory<DirectoryRecord> {
 		return new ISODirectory(this, isoData);
 	}
-	protected _getGetString(): TGetString {
+	protected get _getString(): TGetString {
 		return getASCIIString;
 	}
 }
@@ -235,13 +232,10 @@ export class JolietDirectoryRecord extends DirectoryRecord {
 	constructor(data: ArrayBuffer, rockRidgeOffset: number) {
 		super(data, rockRidgeOffset);
 	}
-	protected _getString(i: number, len: number): string {
-		return getJolietString(this.data, i, len);
-	}
 	protected _constructDirectory(isoData: ArrayBuffer): Directory<DirectoryRecord> {
 		return new JolietDirectory(this, isoData);
 	}
-	protected _getGetString(): TGetString {
+	protected get _getString(): TGetString {
 		return getJolietString;
 	}
 }

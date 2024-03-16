@@ -15,56 +15,56 @@ export class VolumeDescriptor {
 	constructor(protected _data: ArrayBuffer) {
 		this._view = new DataView(_data);
 	}
-	public type(): VolumeDescriptorTypeCode {
+	public get type(): VolumeDescriptorTypeCode {
 		return this._view[0];
 	}
-	public standardIdentifier(): string {
+	public get standardIdentifier(): string {
 		return getASCIIString(this._data, 1, 5);
 	}
-	public version(): number {
+	public get version(): number {
 		return this._view[6];
 	}
-	public data(): ArrayBuffer {
+	public get data(): ArrayBuffer {
 		return this._data.slice(7, 2048);
 	}
 }
 
 export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescriptor {
-	private _root: DirectoryRecord | null = null;
+	private _root?: DirectoryRecord;
 	constructor(data: ArrayBuffer) {
 		super(data);
 	}
-	public systemIdentifier(): string {
-		return this._getString32(8);
+	public get systemIdentifier(): string {
+		return this._getString(8, 32);
 	}
-	public volumeIdentifier(): string {
-		return this._getString32(40);
+	public get volumeIdentifier(): string {
+		return this._getString(40, 32);
 	}
-	public volumeSpaceSize(): number {
+	public get volumeSpaceSize(): number {
 		return this._view.getUint32(80, true);
 	}
-	public volumeSetSize(): number {
+	public get volumeSetSize(): number {
 		return this._view.getUint16(120, true);
 	}
-	public volumeSequenceNumber(): number {
+	public get volumeSequenceNumber(): number {
 		return this._view.getUint16(124, true);
 	}
-	public logicalBlockSize(): number {
+	public get logicalBlockSize(): number {
 		return this._view.getUint16(128, true);
 	}
-	public pathTableSize(): number {
+	public get pathTableSize(): number {
 		return this._view.getUint32(132, true);
 	}
-	public locationOfTypeLPathTable(): number {
+	public get locationOfTypeLPathTable(): number {
 		return this._view.getUint32(140, true);
 	}
-	public locationOfOptionalTypeLPathTable(): number {
+	public get locationOfOptionalTypeLPathTable(): number {
 		return this._view.getUint32(144, true);
 	}
-	public locationOfTypeMPathTable(): number {
+	public get locationOfTypeMPathTable(): number {
 		return this._view.getUint32(148);
 	}
-	public locationOfOptionalTypeMPathTable(): number {
+	public get locationOfOptionalTypeMPathTable(): number {
 		return this._view.getUint32(152);
 	}
 	public rootDirectoryEntry(isoData: ArrayBuffer): DirectoryRecord {
@@ -74,64 +74,61 @@ export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescr
 		this._root = this._constructRootDirectoryRecord(this._data.slice(156));
 		this._root.rootCheckForRockRidge(isoData);
 	}
-	public volumeSetIdentifier(): string {
+	public get volumeSetIdentifier(): string {
 		return this._getString(190, 128);
 	}
-	public publisherIdentifier(): string {
+	public get publisherIdentifier(): string {
 		return this._getString(318, 128);
 	}
-	public dataPreparerIdentifier(): string {
+	public get dataPreparerIdentifier(): string {
 		return this._getString(446, 128);
 	}
-	public applicationIdentifier(): string {
+	public get applicationIdentifier(): string {
 		return this._getString(574, 128);
 	}
-	public copyrightFileIdentifier(): string {
+	public get copyrightFileIdentifier(): string {
 		return this._getString(702, 38);
 	}
-	public abstractFileIdentifier(): string {
+	public get abstractFileIdentifier(): string {
 		return this._getString(740, 36);
 	}
-	public bibliographicFileIdentifier(): string {
+	public get bibliographicFileIdentifier(): string {
 		return this._getString(776, 37);
 	}
-	public volumeCreationDate(): Date {
+	public get volumeCreationDate(): Date {
 		return getDate(this._data, 813);
 	}
-	public volumeModificationDate(): Date {
+	public get volumeModificationDate(): Date {
 		return getDate(this._data, 830);
 	}
-	public volumeExpirationDate(): Date {
+	public get volumeExpirationDate(): Date {
 		return getDate(this._data, 847);
 	}
-	public volumeEffectiveDate(): Date {
+	public get volumeEffectiveDate(): Date {
 		return getDate(this._data, 864);
 	}
-	public fileStructureVersion(): number {
+	public get fileStructureVersion(): number {
 		return this._view[881];
 	}
-	public applicationUsed(): ArrayBuffer {
+	public get applicationUsed(): ArrayBuffer {
 		return this._data.slice(883, 883 + 512);
 	}
-	public reserved(): ArrayBuffer {
+	public get reserved(): ArrayBuffer {
 		return this._data.slice(1395, 1395 + 653);
 	}
-	public abstract name(): string;
+	public abstract get name(): string;
 	protected abstract _constructRootDirectoryRecord(data: ArrayBuffer): DirectoryRecord;
 	protected abstract _getString(idx: number, len: number): string;
-	protected _getString32(idx: number): string {
-		return this._getString(idx, 32);
-	}
 }
 
 export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescriptor {
 	constructor(data: ArrayBuffer) {
 		super(data);
-		if (this.type() !== VolumeDescriptorTypeCode.PrimaryVolumeDescriptor) {
+		if (this.type !== VolumeDescriptorTypeCode.PrimaryVolumeDescriptor) {
 			throw new ApiError(ErrorCode.EIO, `Invalid primary volume descriptor.`);
 		}
 	}
-	public name() {
+	public get name() {
 		return 'ISO9660';
 	}
 	protected _constructRootDirectoryRecord(data: ArrayBuffer): DirectoryRecord {
@@ -145,7 +142,7 @@ export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescrip
 export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescriptor {
 	constructor(data: ArrayBuffer) {
 		super(data);
-		if (this.type() !== VolumeDescriptorTypeCode.SupplementaryVolumeDescriptor) {
+		if (this.type !== VolumeDescriptorTypeCode.SupplementaryVolumeDescriptor) {
 			throw new ApiError(ErrorCode.EIO, `Invalid supplementary volume descriptor.`);
 		}
 		const escapeSequence = this.escapeSequence();
@@ -156,7 +153,7 @@ export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeD
 			throw new ApiError(ErrorCode.EIO, `Unrecognized escape sequence for SupplementaryVolumeDescriptor: ${escapeSequence.toString()}`);
 		}
 	}
-	public name() {
+	public get name() {
 		return 'Joliet';
 	}
 	public escapeSequence(): ArrayBuffer {

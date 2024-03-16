@@ -1,14 +1,14 @@
 import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
 import type { Backend } from '@browserfs/core/backends/backend.js';
+import type { Cred } from '@browserfs/core/cred.js';
 import * as path from '@browserfs/core/emulation/path.js';
+import { resolve } from '@browserfs/core/emulation/path.js';
 import { FileFlag, NoSyncFile } from '@browserfs/core/file.js';
-import { FileSystemMetadata, ReadonlySyncFileSystem } from '@browserfs/core/filesystem.js';
+import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@browserfs/core/filesystem.js';
 import { FileType, Stats } from '@browserfs/core/stats.js';
 import { DirectoryRecord } from './DirectoryRecord.js';
 import { PrimaryOrSupplementaryVolumeDescriptor, PrimaryVolumeDescriptor, SupplementaryVolumeDescriptor, VolumeDescriptor, VolumeDescriptorTypeCode } from './VolumeDescriptor.js';
 import { PXEntry, TFEntry, TFFlags } from './entries.js';
-import type { Cred } from '@browserfs/core/cred.js';
-import { resolve } from '@browserfs/core/emulation/path.js';
 
 /**
  * Options for IsoFS file system instances.
@@ -31,7 +31,7 @@ export interface IsoOptions {
  * * Vanilla ISO9660 ISOs
  * * Microsoft Joliet and Rock Ridge extensions to the ISO9660 standard
  */
-export class IsoFS extends ReadonlySyncFileSystem {
+export class IsoFS extends Readonly(Sync(FileSystem)) {
 	private _data: ArrayBuffer;
 	private _pvd: PrimaryOrSupplementaryVolumeDescriptor;
 	private _root: DirectoryRecord;
@@ -54,7 +54,7 @@ export class IsoFS extends ReadonlySyncFileSystem {
 		while (!vdTerminatorFound) {
 			const slice = this._data.slice(i);
 			const vd = new VolumeDescriptor(slice);
-			switch (vd.type()) {
+			switch (vd.type) {
 				case VolumeDescriptorTypeCode.PrimaryVolumeDescriptor:
 					candidateVDs.push(new PrimaryVolumeDescriptor(slice));
 					break;
@@ -72,7 +72,7 @@ export class IsoFS extends ReadonlySyncFileSystem {
 		}
 		for (const v of candidateVDs) {
 			// Take an SVD over a PVD.
-			if (!this._pvd || this._pvd.type() !== VolumeDescriptorTypeCode.SupplementaryVolumeDescriptor) {
+			if (!this._pvd || this._pvd.type !== VolumeDescriptorTypeCode.SupplementaryVolumeDescriptor) {
 				this._pvd = v;
 			}
 		}
@@ -80,14 +80,10 @@ export class IsoFS extends ReadonlySyncFileSystem {
 		this._name = name;
 	}
 
-	public get metadata(): FileSystemMetadata {
-		let name = `IsoFS${this._name}${this._pvd ? `-${this._pvd.name()}` : ''}`;
-		if (this._root && this._root.hasRockRidge) {
-			name += `-RockRidge`;
-		}
+	public metadata(): FileSystemMetadata {
 		return {
-			...super.metadata,
-			name,
+			...super.metadata(),
+			name: ['iso', this._name, this._pvd?.name, this._root && this._root.hasRockRidge && 'RockRidge'].filter(e => e).join(':'),
 			synchronous: true,
 			readonly: true,
 			totalSpace: this._data.byteLength,

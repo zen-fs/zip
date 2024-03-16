@@ -205,19 +205,19 @@ export class SLEntry extends SystemUseEntry {
 	constructor(data: ArrayBuffer) {
 		super(data);
 	}
-	public flags(): number {
+	public get flags(): number {
 		return this._view[4];
 	}
-	public continueFlag(): number {
-		return this.flags() & 1;
+	public get continueFlag(): number {
+		return this.flags & 1;
 	}
-	public componentRecords(): SLComponentRecord[] {
+	public get componentRecords(): SLComponentRecord[] {
 		const records = new Array<SLComponentRecord>();
 		let i = 5;
 		while (i < this.length()) {
 			const record = new SLComponentRecord(this.data.slice(i));
 			records.push(record);
-			i += record.length();
+			i += record.length;
 		}
 		return records;
 	}
