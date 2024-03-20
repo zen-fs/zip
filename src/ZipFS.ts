@@ -199,13 +199,13 @@ export class ZipFS extends SyncFileIndexFS<CentralDirectory> {
 			return inode.data!;
 		}
 		// Should never occur.
-		throw ApiError.EPERM(`Invalid inode: ${inode}`);
+		throw ApiError.EPERM('Invalid inode: ' + inode);
 	}
 
 	public getCentralDirectoryEntryAt(index: number): CentralDirectory {
 		const dirEntry = this._directoryEntries[index];
 		if (!dirEntry) {
-			throw new RangeError(`Invalid directory index: ${index}.`);
+			throw new RangeError('Invalid directory index: ' + index);
 		}
 		return dirEntry;
 	}
