@@ -11,7 +11,7 @@
 	],
 	"type": "module",
 	"homepage": "https://github.com/browser-fs/zip",
-	"author": "dr-vortex <jp@drvortex.dev>",
+	"author": "James P. <jp@drvortex.dev>",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -39,7 +39,7 @@
 		"lint": "eslint src",
 		"test": "cross-env NODE_OPTIONS=--experimental-vm-modules npx jest",
 		"build": "node scripts/build.mjs",
-		"build:docs": "typedoc --out docs --name BrowserFS src/index.ts",
+		"build:docs": "typedoc --out docs --name 'BrowserFS Zip' src/index.ts",
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
