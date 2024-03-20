@@ -26,10 +26,10 @@ export class DigitalSignature {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid digital signature signature: ' + this._view.getUint32(0, true));
 		}
 	}
-	public size(): number {
+	public get size(): number {
 		return this._view.getUint16(4, true);
 	}
-	public signatureData(): ArrayBuffer {
-		return this.data.slice(6, 6 + this.size());
+	public get signatureData(): ArrayBuffer {
+		return this.data.slice(6, 6 + this.size);
 	}
 }

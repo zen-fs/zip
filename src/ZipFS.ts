@@ -1,29 +1,28 @@
 import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
-import { FileIndex, IndexDirInode, IndexFileInode, isIndexDirInode, isIndexFileInode } from '@browserfs/core/FileIndex.js';
-import { CreateBackend, type BackendOptions } from '@browserfs/core/backends/backend.js';
-import { ActionType, FileFlag, NoSyncFile } from '@browserfs/core/file.js';
-import { FileContents, FileSystemMetadata, SynchronousFileSystem } from '@browserfs/core/filesystem.js';
+import { FileIndex, IndexDirInode, IndexFileInode, SyncFileIndexFS } from '@browserfs/core/FileIndex.js';
+import { type Backend } from '@browserfs/core/backends/backend.js';
+import { FileFlag, NoSyncFile } from '@browserfs/core/file.js';
+import type { FileSystemMetadata } from '@browserfs/core/filesystem.js';
 import { Stats } from '@browserfs/core/stats.js';
 import { CentralDirectory } from './file/CentralDirectory.js';
 import { EndOfCentralDirectory } from './file/EndOfCentralDirectory.js';
 import { TableOfContents } from './file/TableOfContents.js';
-import { decode } from '@browserfs/core/utils.js';
 
-export namespace ZipFS {
+/**
+ * Configuration options for a ZipFS file system.
+ */
+export interface ZipOptions {
 	/**
-	 * Configuration options for a ZipFS file system.
+	 * The zip file as a binary buffer.
 	 */
-	export interface Options {
-		/**
-		 * The zip file as a binary buffer.
-		 */
-		zipData: ArrayBufferLike;
-		/**
-		 * The name of the zip file (optional).
-		 */
-		name?: string;
-	}
+	zipData: ArrayBufferLike;
+	/**
+	 * The name of the zip file (optional).
+	 */
+	name?: string;
 }
+
+export const maxDirectoryEntries = 256;
 
 /**
  * Zip file-backed filesystem
@@ -64,37 +63,12 @@ export namespace ZipFS {
  *   - Stream it out to a location.
  *   This isn't that bad, so we might do this at a later date.
  */
-export class ZipFS extends SynchronousFileSystem {
-	public static readonly Name = 'ZipFS';
-
-	public static Create = CreateBackend.bind(this);
-
-	public static readonly Options: BackendOptions = {
-		zipData: {
-			type: 'object',
-			description: 'The zip file as a Uint8Array object.',
-			validator(buff: unknown) {
-				if (!(buff instanceof Uint8Array)) {
-					throw new ApiError(ErrorCode.EINVAL, 'option must be a Uint8Array.');
-				}
-			},
-		},
-		name: {
-			type: 'string',
-			optional: true,
-			description: 'The name of the zip file (optional).',
-		},
-	};
-
-	public static isAvailable(): boolean {
-		return true;
-	}
-
+export class ZipFS extends SyncFileIndexFS<CentralDirectory> {
 	/**
 	 * Locates the end of central directory record at the end of the file.
 	 * Throws an exception if it cannot be found.
 	 */
-	private static _getEOCD(data: ArrayBufferLike): EndOfCentralDirectory {
+	protected static _getEOCD(data: ArrayBufferLike): EndOfCentralDirectory {
 		const view = new DataView(data);
 		// Unfortunately, the comment is variable size and up to 64K in size.
 		// We assume that the magic signature does not appear in the comment, and
@@ -115,41 +89,37 @@ export class ZipFS extends SynchronousFileSystem {
 		throw new ApiError(ErrorCode.EINVAL, 'Invalid ZIP file: Could not locate End of Central Directory signature.');
 	}
 
-	private static _addToIndex(cd: CentralDirectory, index: FileIndex<CentralDirectory>) {
+	protected static _addToIndex(cd: CentralDirectory, index: FileIndex<CentralDirectory>) {
 		// Paths must be absolute, yet zip file paths are always relative to the
 		// zip root. So we append '/' and call it a day.
-		let filename = cd.fileName();
-		if (filename.charAt(0) === '/') {
-			throw new ApiError(ErrorCode.EPERM, `Unexpectedly encountered an absolute path in a zip file. Please file a bug.`);
+		let filename = cd.fileName;
+		if (filename[0] == '/') {
+			throw new ApiError(ErrorCode.EPERM, 'Unexpectedly encountered an absolute path in a zip file. Please file a bug.');
 		}
 		// XXX: For the file index, strip the trailing '/'.
-		if (filename.charAt(filename.length - 1) === '/') {
-			filename = filename.slice(0, filename.length - 1);
+		if (filename.endsWith('/')) {
+			filename = filename.slice(0, -1);
 		}
 
-		if (cd.isDirectory()) {
-			index.addPathFast('/' + filename, new IndexDirInode<CentralDirectory>(cd));
-		} else {
-			index.addPathFast('/' + filename, new IndexFileInode<CentralDirectory>(cd));
-		}
+		index.addFast('/' + filename, cd.isDirectory ? new IndexDirInode<CentralDirectory>(cd) : new IndexFileInode<CentralDirectory>(cd));
 	}
 
-	private static async _computeIndex(data: ArrayBufferLike): Promise<TableOfContents> {
+	protected static async _computeIndex(data: ArrayBufferLike): Promise<TableOfContents> {
 		const index: FileIndex<CentralDirectory> = new FileIndex<CentralDirectory>();
 		const eocd: EndOfCentralDirectory = ZipFS._getEOCD(data);
-		if (eocd.diskNumber() !== eocd.cdDiskNumber()) {
+		if (eocd.diskNumber != eocd.cdDiskNumber) {
 			throw new ApiError(ErrorCode.EINVAL, 'ZipFS does not support spanned zip files.');
 		}
 
-		const cdPtr = eocd.cdOffset();
+		const cdPtr = eocd.cdOffset;
 		if (cdPtr === 0xffffffff) {
 			throw new ApiError(ErrorCode.EINVAL, 'ZipFS does not support Zip64.');
 		}
-		const cdEnd = cdPtr + eocd.cdSize();
+		const cdEnd = cdPtr + eocd.cdSize;
 		return ZipFS._computeIndexResponsive(data, index, cdPtr, cdEnd, [], eocd);
 	}
 
-	private static async _computeIndexResponsive(
+	protected static async _computeIndexResponsive(
 		data: ArrayBufferLike,
 		index: FileIndex<CentralDirectory>,
 		cdPtr: number,
@@ -162,38 +132,52 @@ export class ZipFS extends SynchronousFileSystem {
 		}
 
 		let count = 0;
-		while (count++ < 200 && cdPtr < cdEnd) {
+		while (count++ < maxDirectoryEntries && cdPtr < cdEnd) {
 			const cd: CentralDirectory = new CentralDirectory(data, data.slice(cdPtr));
 			ZipFS._addToIndex(cd, index);
-			cdPtr += cd.totalSize();
+			cdPtr += cd.totalSize;
 			cdEntries.push(cd);
+		}
+
+		if (count >= maxDirectoryEntries) {
+			console.warn('Max number of directory entries reached.');
 		}
 
 		return ZipFS._computeIndexResponsive(data, index, cdPtr, cdEnd, cdEntries, eocd);
 	}
 
-	private _index: FileIndex<CentralDirectory> = new FileIndex<CentralDirectory>();
+	public _index: FileIndex<CentralDirectory> = new FileIndex<CentralDirectory>();
 	private _directoryEntries: CentralDirectory[] = [];
-	private _eocd: EndOfCentralDirectory | null = null;
+	private _eocd?: EndOfCentralDirectory = null;
 	private data: ArrayBufferLike;
 	public readonly name: string;
 
-	public constructor({ zipData, name = '' }: ZipFS.Options) {
-		super();
-		this.name = name;
-		this._ready = ZipFS._computeIndex(zipData).then(zipTOC => {
-			this._index = zipTOC.index;
-			this._directoryEntries = zipTOC.directoryEntries;
-			this._eocd = zipTOC.eocd;
-			this.data = zipTOC.data;
-			return this;
-		});
+	protected async _initialize(zipData: ArrayBufferLike): Promise<void> {
+		const zipTOC = await ZipFS._computeIndex(zipData);
+		this._index = zipTOC.index;
+		this._directoryEntries = zipTOC.directoryEntries;
+		this._eocd = zipTOC.eocd;
+		this.data = zipTOC.data;
+		return;
 	}
 
-	public get metadata(): FileSystemMetadata {
+	protected _ready: Promise<void>;
+
+	public async ready(): Promise<this> {
+		await this._ready;
+		return;
+	}
+
+	public constructor({ zipData, name = '' }: ZipOptions) {
+		super({});
+		this.name = name;
+		this._ready = this._initialize(zipData);
+	}
+
+	public metadata(): FileSystemMetadata {
 		return {
-			...super.metadata,
-			name: ZipFS.Name + (this.name !== '' ? ` ${this.name}` : ''),
+			...super.metadata(),
+			name: ['zip', this.name].filter(e => e).join(':'),
 			readonly: true,
 			synchronous: true,
 			totalSpace: this.data.byteLength,
@@ -204,18 +188,18 @@ export class ZipFS extends SynchronousFileSystem {
 	 * Get the CentralDirectory object for the given path.
 	 */
 	public getCentralDirectoryEntry(path: string): CentralDirectory {
-		const inode = this._index.getInode(path);
-		if (inode === null) {
+		const inode = this._index.get(path);
+		if (!inode) {
 			throw ApiError.ENOENT(path);
 		}
-		if (isIndexFileInode<CentralDirectory>(inode)) {
-			return inode.getData();
-		} else if (isIndexDirInode<CentralDirectory>(inode)) {
-			return inode.getData()!;
-		} else {
-			// Should never occur.
-			throw ApiError.EPERM(`Invalid inode: ${inode}`);
+		if (inode.isDirectory()) {
+			return inode.data;
 		}
+		if (inode.isFile()) {
+			return inode.data!;
+		}
+		// Should never occur.
+		throw ApiError.EPERM(`Invalid inode: ${inode}`);
 	}
 
 	public getCentralDirectoryEntryAt(index: number): CentralDirectory {
@@ -226,82 +210,49 @@ export class ZipFS extends SynchronousFileSystem {
 		return dirEntry;
 	}
 
-	public getNumberOfCentralDirectoryEntries(): number {
+	public get numberOfCentralDirectoryEntries(): number {
 		return this._directoryEntries.length;
 	}
 
-	public getEndOfCentralDirectory(): EndOfCentralDirectory | null {
+	public get endOfCentralDirectory(): EndOfCentralDirectory | null {
 		return this._eocd;
 	}
 
-	public statSync(path: string): Stats {
-		const inode = this._index.getInode(path);
-		if (inode === null) {
-			throw ApiError.ENOENT(path);
-		}
-		let stats: Stats;
-		if (isIndexFileInode<CentralDirectory>(inode)) {
-			stats = inode.getData().getStats();
-		} else if (isIndexDirInode(inode)) {
-			stats = inode.getStats();
-		} else {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid inode.');
-		}
-		return stats;
+	protected statFileInodeSync(inode: IndexFileInode<CentralDirectory>): Stats {
+		return inode.data.stats;
 	}
 
-	public openSync(path: string, flags: FileFlag, mode: number): NoSyncFile<this> {
-		// INVARIANT: Cannot write to RO file systems.
-		if (flags.isWriteable()) {
-			throw new ApiError(ErrorCode.EPERM, path);
-		}
-		// Check if the path exists, and is a file.
-		const inode = this._index.getInode(path);
-		if (!inode) {
-			throw ApiError.ENOENT(path);
-		} else if (isIndexFileInode<CentralDirectory>(inode) || isIndexDirInode<CentralDirectory>(inode)) {
-			const stats = !isIndexDirInode<CentralDirectory>(inode) ? inode.getData().getStats() : inode.getStats();
-			const data = !isIndexDirInode<CentralDirectory>(inode) ? inode.getData().getData() : inode.getStats().fileData;
-			switch (flags.pathExistsAction()) {
-				case ActionType.THROW_EXCEPTION:
-				case ActionType.TRUNCATE_FILE:
-					throw ApiError.EEXIST(path);
-				case ActionType.NOP:
-					return new NoSyncFile(this, path, flags, stats, data || undefined);
-				default:
-					throw new ApiError(ErrorCode.EINVAL, 'Invalid FileMode object.');
-			}
-		} else {
-			throw ApiError.EPERM(path);
-		}
-	}
-
-	public readdirSync(path: string): string[] {
-		// Check if it exists.
-		const inode = this._index.getInode(path);
-		if (!inode) {
-			throw ApiError.ENOENT(path);
-		} else if (isIndexDirInode(inode)) {
-			return inode.getListing();
-		} else {
-			throw ApiError.ENOTDIR(path);
-		}
-	}
-
-	/**
-	 * Specially-optimized readfile.
-	 */
-	public readFileSync(fname: string, encoding: BufferEncoding, flag: FileFlag): FileContents {
-		// Get file.
-		const fd = this.openSync(fname, flag, 0o644);
-		try {
-			const data = fd.getBuffer();
-			if (encoding === null) {
-				return data;
-			}
-			return decode(data);
-		} finally {
-			fd.closeSync();
-		}
+	protected openFileInodeSync(inode: IndexFileInode<CentralDirectory>, path: string, flag: FileFlag): NoSyncFile<this> {
+		return new NoSyncFile(this, path, flag, this.statFileInodeSync(inode), inode.data.data);
 	}
 }
+
+export const Zip: Backend = {
+	name: 'Zip',
+
+	options: {
+		zipData: {
+			type: 'object',
+			required: true,
+			description: 'The zip file as an ArrayBuffer object.',
+			validator(buff: unknown) {
+				if (!(buff instanceof ArrayBuffer)) {
+					throw new ApiError(ErrorCode.EINVAL, 'option must be a ArrayBuffer.');
+				}
+			},
+		},
+		name: {
+			type: 'string',
+			required: false,
+			description: 'The name of the zip file (optional).',
+		},
+	},
+
+	isAvailable(): boolean {
+		return true;
+	},
+
+	create(options: ZipOptions) {
+		return new ZipFS(options);
+	},
+};

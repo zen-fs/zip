@@ -54,23 +54,23 @@ export class FileHeader {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this._view.getUint32(0, true));
 		}
 	}
-	public versionNeeded(): number {
+	public get versionNeeded(): number {
 		return this._view.getUint16(4, true);
 	}
-	public flags(): number {
+	public get flags(): number {
 		return this._view.getUint16(6, true);
 	}
-	public compressionMethod(): CompressionMethod {
+	public get compressionMethod(): CompressionMethod {
 		return this._view.getUint16(8, true);
 	}
-	public lastModFileTime(): Date {
+	public get lastModFileTime(): Date {
 		// Time and date is in MS-DOS format.
 		return msdos2date(this._view.getUint16(10, true), this._view.getUint16(12, true));
 	}
-	public rawLastModFileTime(): number {
+	public get rawLastModFileTime(): number {
 		return this._view.getUint32(10, true);
 	}
-	public crc32(): number {
+	public get crc32(): number {
 		return this._view.getUint32(14, true);
 	}
 	/**
@@ -86,23 +86,23 @@ export class FileHeader {
 	 */
 	// public compressedSize(): number { return this._view.getUint32(18, true); }
 	// public uncompressedSize(): number { return this._view.getUint32(22, true); }
-	public fileNameLength(): number {
+	public get fileNameLength(): number {
 		return this._view.getUint16(26, true);
 	}
-	public extraFieldLength(): number {
+	public get extraFieldLength(): number {
 		return this._view.getUint16(28, true);
 	}
-	public fileName(): string {
-		return safeToString(this.data, this.useUTF8(), 30, this.fileNameLength());
+	public get fileName(): string {
+		return safeToString(this.data, this.useUTF8, 30, this.fileNameLength);
 	}
-	public extraField(): ArrayBuffer {
-		const start = 30 + this.fileNameLength();
-		return this.data.slice(start, start + this.extraFieldLength());
+	public get extraField(): ArrayBuffer {
+		const start = 30 + this.fileNameLength;
+		return this.data.slice(start, start + this.extraFieldLength);
 	}
-	public totalSize(): number {
-		return 30 + this.fileNameLength() + this.extraFieldLength();
+	public get totalSize(): number {
+		return 30 + this.fileNameLength + this.extraFieldLength;
 	}
-	public useUTF8(): boolean {
-		return (this.flags() & 2048) === 2048;
+	public get useUTF8(): boolean {
+		return (this.flags & 2048) === 2048;
 	}
 }

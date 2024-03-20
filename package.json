@@ -44,9 +44,8 @@
 	},
 	"devDependencies": {
 		"@types/node": "^14.18.62",
-		"@typescript-eslint/eslint-plugin": "^5.55.0",
-		"@typescript-eslint/parser": "^5.55.0",
-		"buffer": "~5.1.0",
+		"@typescript-eslint/eslint-plugin": "^7.2.0",
+		"@typescript-eslint/parser": "^7.2.0",
 		"esbuild": "^0.17.18",
 		"esbuild-plugin-polyfill-node": "^0.3.0",
 		"eslint": "^8.36.0",
@@ -55,6 +54,6 @@
 		"typescript": "5.2.2"
 	},
 	"peerDependencies": {
-		"@browserfs/core": "^0.1.0"
+		"@browserfs/core": "^0.3.5"
 	}
 }

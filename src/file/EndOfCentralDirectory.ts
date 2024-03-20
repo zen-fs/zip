@@ -28,32 +28,32 @@ export class EndOfCentralDirectory {
 			throw new ApiError(ErrorCode.EINVAL, `Invalid Zip file: End of central directory record has invalid signature: ${this._view.getUint32(0, true)}`);
 		}
 	}
-	public diskNumber(): number {
+	public get diskNumber(): number {
 		return this._view.getUint16(4, true);
 	}
-	public cdDiskNumber(): number {
+	public get cdDiskNumber(): number {
 		return this._view.getUint16(6, true);
 	}
-	public cdDiskEntryCount(): number {
+	public get cdDiskEntryCount(): number {
 		return this._view.getUint16(8, true);
 	}
-	public cdTotalEntryCount(): number {
+	public get cdTotalEntryCount(): number {
 		return this._view.getUint16(10, true);
 	}
-	public cdSize(): number {
+	public get cdSize(): number {
 		return this._view.getUint32(12, true);
 	}
-	public cdOffset(): number {
+	public get cdOffset(): number {
 		return this._view.getUint32(16, true);
 	}
-	public cdZipCommentLength(): number {
+	public get cdZipCommentLength(): number {
 		return this._view.getUint16(20, true);
 	}
-	public cdZipComment(): string {
+	public get cdZipComment(): string {
 		// Assuming UTF-8. The specification doesn't specify.
-		return safeToString(this.data, true, 22, this.cdZipCommentLength());
+		return safeToString(this.data, true, 22, this.cdZipCommentLength);
 	}
-	public rawCdZipComment(): ArrayBuffer {
-		return this.data.slice(22, 22 + this.cdZipCommentLength());
+	public get rawCdZipComment(): ArrayBuffer {
+		return this.data.slice(22, 22 + this.cdZipCommentLength);
 	}
 }

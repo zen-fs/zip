@@ -33,66 +33,66 @@ import { FileHeader } from './Header.js';
 
 export class CentralDirectory {
 	// Optimization: The filename is frequently read, so stash it here.
-	private _filename: string;
+	protected _filename: string;
 	protected _view: DataView;
-	constructor(private zipData: ArrayBufferLike, private data: ArrayBufferLike) {
-		this._view = new DataView(data);
+	constructor(private zipData: ArrayBufferLike, private _data: ArrayBufferLike) {
+		this._view = new DataView(_data);
 		// Sanity check.
 		if (this._view.getUint32(0, true) !== 33639248) {
 			throw new ApiError(ErrorCode.EINVAL, `Invalid Zip file: Central directory record has invalid signature: ${this._view.getUint32(0, true)}`);
 		}
-		this._filename = this.produceFilename();
+		this._filename = this.produceFilename;
 	}
-	public versionMadeBy(): number {
+	public get versionMadeBy(): number {
 		return this._view.getUint16(4, true);
 	}
-	public versionNeeded(): number {
+	public get versionNeeded(): number {
 		return this._view.getUint16(6, true);
 	}
-	public flag(): number {
+	public get flag(): number {
 		return this._view.getUint16(8, true);
 	}
-	public compressionMethod(): CompressionMethod {
+	public get compressionMethod(): CompressionMethod {
 		return this._view.getUint16(10, true);
 	}
-	public lastModFileTime(): Date {
+	public get lastModFileTime(): Date {
 		// Time and date is in MS-DOS format.
 		return msdos2date(this._view.getUint16(12, true), this._view.getUint16(14, true));
 	}
-	public rawLastModFileTime(): number {
+	public get rawLastModFileTime(): number {
 		return this._view.getUint32(12, true);
 	}
-	public crc32(): number {
+	public get crc32(): number {
 		return this._view.getUint32(16, true);
 	}
-	public compressedSize(): number {
+	public get compressedSize(): number {
 		return this._view.getUint32(20, true);
 	}
-	public uncompressedSize(): number {
+	public get uncompressedSize(): number {
 		return this._view.getUint32(24, true);
 	}
-	public fileNameLength(): number {
+	public get fileNameLength(): number {
 		return this._view.getUint16(28, true);
 	}
-	public extraFieldLength(): number {
+	public get extraFieldLength(): number {
 		return this._view.getUint16(30, true);
 	}
-	public fileCommentLength(): number {
+	public get fileCommentLength(): number {
 		return this._view.getUint16(32, true);
 	}
-	public diskNumberStart(): number {
+	public get diskNumberStart(): number {
 		return this._view.getUint16(34, true);
 	}
-	public internalAttributes(): number {
+	public get internalAttributes(): number {
 		return this._view.getUint16(36, true);
 	}
-	public externalAttributes(): number {
+	public get externalAttributes(): number {
 		return this._view.getUint32(38, true);
 	}
-	public headerRelativeOffset(): number {
+	public get headerRelativeOffset(): number {
 		return this._view.getUint32(42, true);
 	}
-	public produceFilename(): string {
+	public get produceFilename(): string {
 		/*
 	  4.4.17.1 claims:
 	  * All slashes are forward ('/') slashes.
@@ -102,35 +102,35 @@ export class CentralDirectory {
 
 	  Unfortunately, this isn't true in practice. Some Windows zip utilities use
 	  a backslash here, but the correct Unix-style path in file headers.
-
+getCentralDirectoryEntryAt
 	  To avoid seeking all over the file to recover the known-good filenames
 	  from file headers, we simply convert '/' to '\' here.
 	*/
-		const fileName: string = safeToString(this.data, this.useUTF8(), 46, this.fileNameLength());
+		const fileName: string = safeToString(this._data, this.useUTF8, 46, this.fileNameLength);
 		return fileName.replace(/\\/g, '/');
 	}
-	public fileName(): string {
+	public get fileName(): string {
 		return this._filename;
 	}
-	public rawFileName(): ArrayBuffer {
-		return this.data.slice(46, 46 + this.fileNameLength());
+	public get rawFileName(): ArrayBuffer {
+		return this._data.slice(46, 46 + this.fileNameLength);
 	}
-	public extraField(): ArrayBuffer {
-		const start = 44 + this.fileNameLength();
-		return this.data.slice(start, start + this.extraFieldLength());
+	public get extraField(): ArrayBuffer {
+		const start = 44 + this.fileNameLength;
+		return this._data.slice(start, start + this.extraFieldLength);
 	}
-	public fileComment(): string {
-		const start = 46 + this.fileNameLength() + this.extraFieldLength();
-		return safeToString(this.data, this.useUTF8(), start, this.fileCommentLength());
+	public get fileComment(): string {
+		const start = 46 + this.fileNameLength + this.extraFieldLength;
+		return safeToString(this._data, this.useUTF8, start, this.fileCommentLength);
 	}
-	public rawFileComment(): ArrayBuffer {
-		const start = 46 + this.fileNameLength() + this.extraFieldLength();
-		return this.data.slice(start, start + this.fileCommentLength());
+	public get rawFileComment(): ArrayBuffer {
+		const start = 46 + this.fileNameLength + this.extraFieldLength;
+		return this._data.slice(start, start + this.fileCommentLength);
 	}
-	public totalSize(): number {
-		return 46 + this.fileNameLength() + this.extraFieldLength() + this.fileCommentLength();
+	public get totalSize(): number {
+		return 46 + this.fileNameLength + this.extraFieldLength + this.fileCommentLength;
 	}
-	public isDirectory(): boolean {
+	public get isDirectory(): boolean {
 		// NOTE: This assumes that the zip file implementation uses the lower byte
 		//       of external attributes for DOS attributes for
 		//       backwards-compatibility. This is not mandated, but appears to be
@@ -139,32 +139,32 @@ export class CentralDirectory {
 		//       platform-dependent.
 		//       If that fails, we also check if the name of the file ends in '/',
 		//       which is what Java's ZipFile implementation does.
-		const fileName = this.fileName();
-		return (this.externalAttributes() & 16 ? true : false) || fileName.charAt(fileName.length - 1) === '/';
+		const fileName = this.fileName;
+		return (this.externalAttributes & 16 ? true : false) || fileName.charAt(fileName.length - 1) === '/';
 	}
-	public isFile(): boolean {
-		return !this.isDirectory();
+	public get isFile(): boolean {
+		return !this.isDirectory;
 	}
-	public useUTF8(): boolean {
-		return (this.flag() & 2048) === 2048;
+	public get useUTF8(): boolean {
+		return (this.flag & 2048) == 2048;
 	}
-	public isEncrypted(): boolean {
-		return (this.flag() & 1) === 1;
+	public get isEncrypted(): boolean {
+		return (this.flag & 1) == 1;
 	}
-	public getFileData(): Data {
+	public get fileData(): Data {
 		// Need to grab the header before we can figure out where the actual
 		// compressed data starts.
-		const start = this.headerRelativeOffset();
+		const start = this.headerRelativeOffset;
 		const header = new FileHeader(this.zipData.slice(start));
-		return new Data(header, this, this.zipData.slice(start + header.totalSize()));
+		return new Data(header, this, this.zipData.slice(start + header.totalSize));
 	}
-	public getData(): Uint8Array {
-		return this.getFileData().decompress();
+	public get data(): Uint8Array {
+		return this.fileData.decompress();
 	}
-	public getRawData(): ArrayBuffer {
-		return this.getFileData().getRawData();
+	public get rawData(): ArrayBuffer {
+		return this.fileData.data;
 	}
-	public getStats(): Stats {
-		return new Stats(FileType.FILE, this.uncompressedSize(), 365, Date.now(), this.lastModFileTime().getTime());
+	public get stats(): Stats {
+		return new Stats(FileType.FILE, this.uncompressedSize, 365, Date.now(), this.lastModFileTime.getTime());
 	}
 }

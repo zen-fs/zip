@@ -19,29 +19,20 @@ import { FileHeader as Header } from './Header.js';
  */
 export class Data {
 	protected _view: DataView;
-	constructor(private header: Header, private record: CentralDirectory, private data: ArrayBufferLike) {
+	constructor(public readonly header: Header, public readonly record: CentralDirectory, public readonly data: ArrayBufferLike) {
 		this._view = new DataView(data);
 	}
 	public decompress(): Uint8Array {
 		// Check the compression
-		const compressionMethod: CompressionMethod = this.header.compressionMethod();
+		const compressionMethod: CompressionMethod = this.header.compressionMethod;
 		const decompress = decompressionMethods[compressionMethod];
 		if (typeof decompress != 'function') {
 			let name: string = CompressionMethod[compressionMethod];
 			if (!name) {
 				name = 'Unknown: ' + compressionMethod;
 			}
-			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${this.header.fileName()}': ${name}`);
+			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${this.header.fileName}': ${name}`);
 		}
-		return decompress(this.data, this.record.compressedSize(), this.record.uncompressedSize(), this.record.flag());
-	}
-	public getHeader(): Header {
-		return this.header;
-	}
-	public getRecord(): CentralDirectory {
-		return this.record;
-	}
-	public getRawData(): ArrayBuffer {
-		return this.data;
+		return decompress(this.data, this.record.compressedSize, this.record.uncompressedSize, this.record.flag);
 	}
 }
