@@ -208,7 +208,7 @@ export const Iso: Backend = {
 			description: 'The ISO file in a buffer',
 			validator(arg: unknown) {
 				if (!(arg instanceof ArrayBuffer)) {
-					throw new TypeError();
+					throw new TypeError('data is not an ArrayBuffer');
 				}
 			},
 		},
