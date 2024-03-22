@@ -1,4 +1,4 @@
-import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
+import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { safeToString } from '../utils.js';
 import { endOfCentralDirectoryMagic } from '../constants.js';
 

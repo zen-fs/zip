@@ -1,9 +1,9 @@
-import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
-import { FileIndex, IndexDirInode, IndexFileInode, SyncFileIndexFS } from '@browserfs/core/FileIndex.js';
-import { type Backend } from '@browserfs/core/backends/backend.js';
-import { FileFlag, NoSyncFile } from '@browserfs/core/file.js';
-import type { FileSystemMetadata } from '@browserfs/core/filesystem.js';
-import { Stats } from '@browserfs/core/stats.js';
+import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
+import { FileIndex, IndexDirInode, IndexFileInode, SyncFileIndexFS } from '@zenfs/core/FileIndex.js';
+import { type Backend } from '@zenfs/core/backends/backend.js';
+import { FileFlag, NoSyncFile } from '@zenfs/core/file.js';
+import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
+import { Stats } from '@zenfs/core/stats.js';
 import { CentralDirectory } from './file/CentralDirectory.js';
 import { EndOfCentralDirectory } from './file/EndOfCentralDirectory.js';
 import { TableOfContents } from './file/TableOfContents.js';
@@ -30,13 +30,13 @@ export const maxDirectoryEntries = 256;
  * http://www.pkware.com/documents/casestudies/APPNOTE.TXT
  *
  * While there are a few zip libraries for JavaScript (e.g. JSZip and zip.js),
- * they are not a good match for BrowserFS. In particular, these libraries
+ * they are not a good match for ZenFS. In particular, these libraries
  * perform a lot of unneeded data copying, and eagerly decompress every file
  * in the zip file upon loading to check the CRC32. They also eagerly decode
  * strings. Furthermore, these libraries duplicate functionality already present
- * in BrowserFS (e.g. UTF-8 decoding and binary data manipulation).
+ * in ZenFS (e.g. UTF-8 decoding and binary data manipulation).
  *
- * This filesystem takes advantage of BrowserFS's Uint8Array implementation, which
+ * This filesystem takes advantage of ZenFS's Uint8Array implementation, which
  * efficiently represents the zip file in memory (in both ArrayUint8Array-enabled
  * browsers *and* non-ArrayUint8Array browsers), and which can neatly be 'sliced'
  * without copying data. Each struct defined in the standard is represented with

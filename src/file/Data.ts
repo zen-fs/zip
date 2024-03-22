@@ -1,4 +1,4 @@
-import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
+import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { CompressionMethod, decompressionMethods } from '../compression.js';
 import { CentralDirectory } from './CentralDirectory.js';
 import { FileHeader as Header } from './Header.js';

@@ -1,4 +1,4 @@
-import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
+import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 
 /**
  * 4.3.13 Digital signature:

@@ -1,5 +1,5 @@
 import { extendedASCIIChars } from './constants.js';
-import { decode } from '@browserfs/core/utils.js';
+import { decode } from '@zenfs/core/utils.js';
 
 /**
  * Converts the input time and date in MS-DOS format into a JavaScript Date

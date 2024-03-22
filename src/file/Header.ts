@@ -1,4 +1,4 @@
-import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
+import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { CompressionMethod } from '../compression.js';
 import { msdos2date, safeToString } from '../utils.js';
 

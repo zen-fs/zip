@@ -1,5 +1,5 @@
-import { ApiError, ErrorCode } from '@browserfs/core/ApiError.js';
-import { FileType, Stats } from '@browserfs/core/stats.js';
+import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
+import { FileType, Stats } from '@zenfs/core/stats.js';
 import { CompressionMethod } from '../compression.js';
 import { msdos2date, safeToString } from '../utils.js';
 import { Data } from './Data.js';
