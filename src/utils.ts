@@ -1,4 +1,4 @@
-import { decode } from '@browserfs/core/utils.js';
+import { decode } from '@zenfs/core/utils.js';
 
 export function getASCIIString(data: ArrayBuffer, startIndex: number, length: number) {
 	const buffer = data.slice(startIndex, startIndex + length);

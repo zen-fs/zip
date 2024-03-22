@@ -1,4 +1,4 @@
-import { ApiError, ErrorCode } from '@browserfs/core/index.js';
+import { ApiError, ErrorCode } from '@zenfs/core/index.js';
 import { DirectoryRecord, ISODirectoryRecord, JolietDirectoryRecord } from './DirectoryRecord.js';
 import { getASCIIString, getDate, getJolietString } from './utils.js';
 

@@ -1,7 +1,7 @@
 {
-	"name": "@browserfs/iso",
+	"name": "@zenfs/iso",
 	"version": "0.0.2",
-	"description": "Zip backend for BrowserFS",
+	"description": "Iso backend for ZenFS",
 	"main": "dist/index.js",
 	"types": "dist",
 	"keywords": [
@@ -10,15 +10,15 @@
 		"storage"
 	],
 	"type": "module",
-	"homepage": "https://github.com/browser-fs/iso",
+	"homepage": "https://github.com/zen-fs/iso",
 	"author": "dr-vortex <jp@drvortex.dev>",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/browser-fs/iso.git"
+		"url": "git+https://github.com/zen-fs/iso.git"
 	},
 	"bugs": {
-		"url": "https://github.com/browser-fs/iso/issues"
+		"url": "https://github.com/zen-fs/iso/issues"
 	},
 	"engines": {
 		"node": ">= 18"
@@ -31,7 +31,7 @@
 		"format:check": "prettier --check src",
 		"lint": "eslint src",
 		"build": "node scripts/build.mjs",
-		"build:docs": "typedoc --out docs --name BrowserFS src/index.ts",
+		"build:docs": "typedoc --out docs --name ZenFS src/index.ts",
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
@@ -45,6 +45,6 @@
 		"typescript": "5.2.2"
 	},
 	"peerDependencies": {
-		"@browserfs/core": "^0.3.2"
+		"@zenfs/core": "^0.3.2"
 	}
 }

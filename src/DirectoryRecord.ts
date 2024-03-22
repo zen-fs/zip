@@ -112,7 +112,7 @@ export abstract class DirectoryRecord {
 					if (flags & SLComponentFlags.CURRENT) {
 						p += './';
 					} else if (flags & SLComponentFlags.PARENT) {
-						p += '@browserfs/core/';
+						p += '@zenfs/core/';
 					} else if (flags & SLComponentFlags.ROOT) {
 						p += '/';
 					} else {
