@@ -35,7 +35,10 @@ export class CentralDirectory {
 	// Optimization: The filename is frequently read, so stash it here.
 	protected _filename: string;
 	protected _view: DataView;
-	constructor(private zipData: ArrayBufferLike, private _data: ArrayBufferLike) {
+	constructor(
+		private zipData: ArrayBufferLike,
+		private _data: ArrayBufferLike
+	) {
 		this._view = new DataView(_data);
 		// Sanity check.
 		if (this._view.getUint32(0, true) !== 33639248) {

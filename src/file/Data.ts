@@ -19,7 +19,11 @@ import { FileHeader as Header } from './Header.js';
  */
 export class Data {
 	protected _view: DataView;
-	constructor(public readonly header: Header, public readonly record: CentralDirectory, public readonly data: ArrayBufferLike) {
+	constructor(
+		public readonly header: Header,
+		public readonly record: CentralDirectory,
+		public readonly data: ArrayBufferLike
+	) {
 		this._view = new DataView(data);
 	}
 	public decompress(): Uint8Array {

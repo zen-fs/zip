@@ -4,4 +4,3 @@ dist
 docs
 *.log
 tmp
-build

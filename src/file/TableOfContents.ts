@@ -7,5 +7,10 @@ import { EndOfCentralDirectory } from './EndOfCentralDirectory.js';
  */
 
 export class TableOfContents {
-	constructor(public index: FileIndex<CentralDirectory>, public directoryEntries: CentralDirectory[], public eocd: EndOfCentralDirectory, public data: ArrayBuffer) {}
+	constructor(
+		public index: FileIndex<CentralDirectory>,
+		public directoryEntries: CentralDirectory[],
+		public eocd: EndOfCentralDirectory,
+		public data: ArrayBuffer
+	) {}
 }
