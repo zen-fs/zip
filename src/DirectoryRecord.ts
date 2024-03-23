@@ -10,7 +10,10 @@ export abstract class DirectoryRecord {
 	protected _rockRidgeOffset: number;
 	protected _suEntries: SystemUseEntry[] | null = null;
 	private _fileOrDir: ArrayBuffer | Directory<DirectoryRecord> | null = null;
-	constructor(protected data: ArrayBuffer, rockRidgeOffset: number) {
+	constructor(
+		protected data: ArrayBuffer,
+		rockRidgeOffset: number
+	) {
 		this._view = new DataView(data);
 		this._rockRidgeOffset = rockRidgeOffset;
 	}
