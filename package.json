@@ -35,8 +35,8 @@
 		}
 	},
 	"scripts": {
-		"format": "prettier --write src",
-		"format:check": "prettier --check src",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
 		"lint": "eslint src",
 		"test": "cross-env NODE_OPTIONS=--experimental-vm-modules npx jest",
 		"build": "node scripts/build.mjs",
@@ -55,6 +55,6 @@
 		"typescript": "5.2.2"
 	},
 	"peerDependencies": {
-		"@zenfs/core": "^0.3.5"
+		"@zenfs/core": "^0.5.0"
 	}
 }

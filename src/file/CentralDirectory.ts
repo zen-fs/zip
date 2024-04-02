@@ -168,6 +168,10 @@ getCentralDirectoryEntryAt
 		return this.fileData.data;
 	}
 	public get stats(): Stats {
-		return new Stats(FileType.FILE, this.uncompressedSize, 365, Date.now(), this.lastModFileTime.getTime());
+		return new Stats({
+			mode: 0o555 | FileType.FILE,
+			size: this.uncompressedSize,
+			mtimeMs: this.lastModFileTime.getTime(),
+		});
 	}
 }

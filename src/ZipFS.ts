@@ -1,7 +1,7 @@
 import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { FileIndex, IndexDirInode, IndexFileInode, SyncFileIndexFS } from '@zenfs/core/FileIndex.js';
 import { type Backend } from '@zenfs/core/backends/backend.js';
-import { FileFlag, NoSyncFile } from '@zenfs/core/file.js';
+import { NoSyncFile } from '@zenfs/core/file.js';
 import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { Stats } from '@zenfs/core/stats.js';
 import { CentralDirectory } from './file/CentralDirectory.js';
@@ -222,7 +222,7 @@ export class ZipFS extends SyncFileIndexFS<CentralDirectory> {
 		return inode.data.stats;
 	}
 
-	protected openFileInodeSync(inode: IndexFileInode<CentralDirectory>, path: string, flag: FileFlag): NoSyncFile<this> {
+	protected openFileInodeSync(inode: IndexFileInode<CentralDirectory>, path: string, flag: string): NoSyncFile<this> {
 		return new NoSyncFile(this, path, flag, this.statFileInodeSync(inode), inode.data.data);
 	}
 }
