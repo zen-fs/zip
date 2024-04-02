@@ -3,7 +3,7 @@ import type { Backend } from '@zenfs/core/backends/backend.js';
 import type { Cred } from '@zenfs/core/cred.js';
 import * as path from '@zenfs/core/emulation/path.js';
 import { resolve } from '@zenfs/core/emulation/path.js';
-import { FileFlag, NoSyncFile } from '@zenfs/core/file.js';
+import { NoSyncFile, isWriteable } from '@zenfs/core/file.js';
 import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { FileType, Stats } from '@zenfs/core/stats.js';
 import { DirectoryRecord } from './DirectoryRecord.js';
@@ -98,8 +98,8 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		return this._getStats(p, record)!;
 	}
 
-	public openFileSync(path: string, flag: FileFlag, cred: Cred): NoSyncFile<this> {
-		if (flag.isWriteable()) {
+	public openFileSync(path: string, flag: string, cred: Cred): NoSyncFile<this> {
+		if (isWriteable(flag)) {
 			// Cannot write to RO file systems.
 			throw new ApiError(ErrorCode.EPERM, path);
 		}
@@ -162,10 +162,10 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		}
 
 		let mode = 0o555;
-		const date = record.recordingDate.getTime();
-		let atime = date,
-			mtime = date,
-			ctime = date;
+		const time = record.recordingDate.getTime();
+		let atimeMs = time,
+			mtimeMs = time,
+			ctimeMs = time;
 		if (record.hasRockRidge) {
 			const entries = record.getSUEntries(this._data);
 			for (const entry of entries) {
@@ -179,19 +179,25 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 				}
 				const flags = entry.flags();
 				if (flags & TFFlags.ACCESS) {
-					atime = entry.access()!.getTime();
+					atimeMs = entry.access()!.getTime();
 				}
 				if (flags & TFFlags.MODIFY) {
-					mtime = entry.modify()!.getTime();
+					mtimeMs = entry.modify()!.getTime();
 				}
 				if (flags & TFFlags.CREATION) {
-					ctime = entry.creation()!.getTime();
+					ctimeMs = entry.creation()!.getTime();
 				}
 			}
 		}
 		// Mask out writeable flags. This is a RO file system.
 		mode &= 0o555;
-		return new Stats(record.isDirectory(this._data) ? FileType.DIRECTORY : FileType.FILE, record.dataLength, mode, atime, mtime, ctime);
+		return new Stats({
+			mode: mode | (record.isDirectory(this._data) ? FileType.DIRECTORY : FileType.FILE),
+			size: record.dataLength,
+			atimeMs,
+			mtimeMs,
+			ctimeMs,
+		});
 	}
 }
 
