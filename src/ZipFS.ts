@@ -190,7 +190,7 @@ export class ZipFS extends SyncFileIndexFS<CentralDirectory> {
 	public getCentralDirectoryEntry(path: string): CentralDirectory {
 		const inode = this._index.get(path);
 		if (!inode) {
-			throw ApiError.ENOENT(path);
+			throw ApiError.With('ENOENT', path, 'getCentralDirectoryEntry');
 		}
 		if (inode.isDirectory()) {
 			return inode.data;
@@ -199,7 +199,7 @@ export class ZipFS extends SyncFileIndexFS<CentralDirectory> {
 			return inode.data!;
 		}
 		// Should never occur.
-		throw ApiError.EPERM('Invalid inode: ' + inode);
+		throw ApiError.With('EPERM', 'Invalid inode: ' + inode, 'getCentralDirectoryEntry');
 	}
 
 	public getCentralDirectoryEntryAt(index: number): CentralDirectory {
