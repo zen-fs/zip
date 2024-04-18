@@ -58,6 +58,6 @@
 		"@zenfs/core": "^0.7.0"
 	},
 	"dependencies": {
-		"minizlib": "^3.0.1"
+		"fflate": "^0.8.2"
 	}
 }

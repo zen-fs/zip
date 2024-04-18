@@ -1,4 +1,4 @@
-import { Deflate } from 'minizlib';
+import { inflateSync } from 'fflate';
 
 /**
  * 4.4.5
@@ -29,7 +29,7 @@ export type decompress = (data: ArrayBufferLike, compressedSize: number, uncompr
  */
 export const decompressionMethods: { [method in CompressionMethod]?: decompress } = {
 	[CompressionMethod.DEFLATE](data, end): Uint8Array {
-		return new Deflate({}).end(data.slice(0, end)).read();
+		return inflateSync(new Uint8Array(data, 0, end));
 	},
 
 	[CompressionMethod.STORED](data, compressedSize, uncompressedSize): Uint8Array {
