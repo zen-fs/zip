@@ -1,4 +1,4 @@
-import { inflateRawSync } from 'node:zlib';
+import { Deflate } from 'minizlib';
 
 /**
  * 4.4.5
@@ -27,8 +27,12 @@ export type decompress = (data: ArrayBufferLike, compressedSize: number, uncompr
 /**
  * Maps CompressionMethod to function that decompresses.
  */
-export const decompressionMethods: { [method in CompressionMethod]?: decompress } = {};
+export const decompressionMethods: { [method in CompressionMethod]?: decompress } = {
+	[CompressionMethod.DEFLATE](data, end): Uint8Array {
+		return new Deflate({}).end(data.slice(0, end)).read();
+	},
 
-decompressionMethods[CompressionMethod.DEFLATE] = (data, compressedSize, uncompressedSize) => inflateRawSync(data.slice(0, compressedSize), { chunkSize: uncompressedSize });
-
-decompressionMethods[CompressionMethod.STORED] = (data, compressedSize, uncompressedSize) => new Uint8Array(data, 0, uncompressedSize);
+	[CompressionMethod.STORED](data, compressedSize, uncompressedSize): Uint8Array {
+		return new Uint8Array(data, 0, uncompressedSize);
+	},
+};
