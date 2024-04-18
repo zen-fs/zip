@@ -200,7 +200,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 	}
 }
 
-export const Iso: Backend = {
+export const Iso = {
 	name: 'Iso',
 
 	isAvailable(): boolean {
@@ -210,6 +210,7 @@ export const Iso: Backend = {
 	options: {
 		data: {
 			type: 'object',
+			required: true,
 			description: 'The ISO file in a buffer',
 			validator(arg: unknown) {
 				if (!(arg instanceof ArrayBuffer)) {
@@ -222,4 +223,4 @@ export const Iso: Backend = {
 	create(options: IsoOptions) {
 		return new IsoFS(options);
 	},
-};
+} satisfies Backend<IsoFS, IsoOptions>;
