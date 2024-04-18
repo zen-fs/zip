@@ -179,7 +179,6 @@ export class ZipFS extends SyncFileIndexFS<CentralDirectory> {
 			...super.metadata(),
 			name: ['zip', this.name].filter(e => e).join(':'),
 			readonly: true,
-			synchronous: true,
 			totalSpace: this.data.byteLength,
 		};
 	}
