@@ -39,11 +39,12 @@
 		"format:check": "prettier --check .",
 		"lint": "eslint src",
 		"test": "cross-env NODE_OPTIONS=--experimental-vm-modules npx jest",
-		"build": "node scripts/build.mjs",
+		"build": "npx build --package=@zenfs/core --globalName ZenFS_Zip --entry src/index.ts",
 		"build:docs": "typedoc --out docs --name 'ZenFS Zip' src/index.ts",
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
+		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
 		"@types/node": "^14.18.62",
 		"@typescript-eslint/eslint-plugin": "^7.7.0",
 		"@typescript-eslint/parser": "^7.7.0",
@@ -55,6 +56,6 @@
 		"typescript": "5.2.2"
 	},
 	"peerDependencies": {
-		"@zenfs/core": "^0.5.5"
+		"@zenfs/core": "^0.7.0"
 	}
 }
