@@ -84,7 +84,6 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		return {
 			...super.metadata(),
 			name: ['iso', this._name, this._pvd?.name, this._root && this._root.hasRockRidge && 'RockRidge'].filter(e => e).join(':'),
-			synchronous: true,
 			readonly: true,
 			totalSpace: this._data.byteLength,
 		};
