@@ -33,10 +33,10 @@ export function safeToString(buff: ArrayBufferLike | ArrayBufferView, useUTF8: b
 		return '';
 	}
 
-	const uintArray = new Uint8Array('buffer' in buff ? buff.buffer : buff);
+	const uintArray = new Uint8Array('buffer' in buff ? buff.buffer : buff).slice(start, start + length);
 	if (useUTF8) {
-		return decode(uintArray.slice(start, start + length));
+		return decode(uintArray);
 	} else {
-		return [...uintArray].map(char => (char > 127 ? extendedASCIIChars[char - 128] : String.fromCharCode(char))).join();
+		return [...uintArray].map(char => (char > 127 ? extendedASCIIChars[char - 128] : String.fromCharCode(char))).join('');
 	}
 }

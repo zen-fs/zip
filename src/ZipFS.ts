@@ -226,7 +226,7 @@ export class ZipFS extends SyncFileIndexFS<CentralDirectory> {
 	}
 }
 
-export const Zip: Backend = {
+export const Zip = {
 	name: 'Zip',
 
 	options: {
@@ -254,4 +254,4 @@ export const Zip: Backend = {
 	create(options: ZipOptions) {
 		return new ZipFS(options);
 	},
-};
+} satisfies Backend<ZipFS, ZipOptions>;
