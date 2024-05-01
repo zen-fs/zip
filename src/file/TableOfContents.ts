@@ -1,4 +1,4 @@
-import { FileIndex } from '@zenfs/core/FileIndex.js';
+import { FileIndex } from '@zenfs/core/backends/Index.js';
 import { CentralDirectory } from './CentralDirectory.js';
 import { EndOfCentralDirectory } from './EndOfCentralDirectory.js';
 

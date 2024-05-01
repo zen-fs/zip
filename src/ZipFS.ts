@@ -1,5 +1,5 @@
 import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
-import { FileIndex, IndexDirInode, IndexFileInode, SyncFileIndexFS } from '@zenfs/core/FileIndex.js';
+import { FileIndex, IndexDirInode, IndexFileInode, SyncIndexFS } from '@zenfs/core/backends/Index.js';
 import { type Backend } from '@zenfs/core/backends/backend.js';
 import { NoSyncFile } from '@zenfs/core/file.js';
 import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
@@ -63,7 +63,7 @@ export const maxDirectoryEntries = 256;
  *   - Stream it out to a location.
  *   This isn't that bad, so we might do this at a later date.
  */
-export class ZipFS extends SyncFileIndexFS<CentralDirectory> {
+export class ZipFS extends SyncIndexFS<CentralDirectory> {
 	/**
 	 * Locates the end of central directory record at the end of the file.
 	 * Throws an exception if it cannot be found.
