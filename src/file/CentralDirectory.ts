@@ -32,19 +32,33 @@ import { FileHeader } from './Header.js';
  */
 
 export class CentralDirectory {
-	// Optimization: The filename is frequently read, so stash it here.
-	protected _filename: string;
+	/*
+	The filename is loaded here, since looking it up is expensive
+
+	 4.4.17.1 claims:
+	 * All slashes are forward ('/') slashes.
+	 * Filename doesn't begin with a slash.
+	 * No drive letters or any nonsense like that.
+	 * If filename is missing, the input came from standard input.
+	 Unfortunately, this isn't true in practice.
+	 Some Windows zip utilities use a backslash here,
+	 but the correct Unix-style path in file headers.
+	 To avoid seeking all over the file to recover the known-good filenames
+	 from file headers, we simply convert '/' to '\' here.
+	*/
+	public readonly fileName: string;
 	protected _view: DataView;
 	constructor(
-		private zipData: ArrayBufferLike,
-		private _data: ArrayBufferLike
+		protected zipData: ArrayBufferLike,
+		protected _data: ArrayBufferLike
 	) {
 		this._view = new DataView(_data);
 		// Sanity check.
 		if (this._view.getUint32(0, true) !== 33639248) {
-			throw new ApiError(ErrorCode.EINVAL, `Invalid Zip file: Central directory record has invalid signature: ${this._view.getUint32(0, true)}`);
+			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Central directory record has invalid signature: ' + this._view.getUint32(0, true));
 		}
-		this._filename = this.produceFilename;
+
+		this.fileName = safeToString(this._data, this.useUTF8, 46, this.fileNameLength).replace(/\\/g, '/');
 	}
 	public get versionMadeBy(): number {
 		return this._view.getUint16(4, true);
@@ -61,9 +75,6 @@ export class CentralDirectory {
 	public get lastModFileTime(): Date {
 		// Time and date is in MS-DOS format.
 		return msdos2date(this._view.getUint16(12, true), this._view.getUint16(14, true));
-	}
-	public get rawLastModFileTime(): number {
-		return this._view.getUint32(12, true);
 	}
 	public get crc32(): number {
 		return this._view.getUint32(16, true);
@@ -95,26 +106,6 @@ export class CentralDirectory {
 	public get headerRelativeOffset(): number {
 		return this._view.getUint32(42, true);
 	}
-	public get produceFilename(): string {
-		/*
-	  4.4.17.1 claims:
-	  * All slashes are forward ('/') slashes.
-	  * Filename doesn't begin with a slash.
-	  * No drive letters or any nonsense like that.
-	  * If filename is missing, the input came from standard input.
-
-	  Unfortunately, this isn't true in practice. Some Windows zip utilities use
-	  a backslash here, but the correct Unix-style path in file headers.
-getCentralDirectoryEntryAt
-	  To avoid seeking all over the file to recover the known-good filenames
-	  from file headers, we simply convert '/' to '\' here.
-	*/
-		const fileName: string = safeToString(this._data, this.useUTF8, 46, this.fileNameLength);
-		return fileName.replace(/\\/g, '/');
-	}
-	public get fileName(): string {
-		return this._filename;
-	}
 	public get rawFileName(): ArrayBuffer {
 		return this._data.slice(46, 46 + this.fileNameLength);
 	}
@@ -126,24 +117,18 @@ getCentralDirectoryEntryAt
 		const start = 46 + this.fileNameLength + this.extraFieldLength;
 		return safeToString(this._data, this.useUTF8, start, this.fileCommentLength);
 	}
-	public get rawFileComment(): ArrayBuffer {
-		const start = 46 + this.fileNameLength + this.extraFieldLength;
-		return this._data.slice(start, start + this.fileCommentLength);
-	}
 	public get totalSize(): number {
 		return 46 + this.fileNameLength + this.extraFieldLength + this.fileCommentLength;
 	}
 	public get isDirectory(): boolean {
-		// NOTE: This assumes that the zip file implementation uses the lower byte
-		//       of external attributes for DOS attributes for
-		//       backwards-compatibility. This is not mandated, but appears to be
-		//       commonplace.
-		//       According to the spec, the layout of external attributes is
-		//       platform-dependent.
-		//       If that fails, we also check if the name of the file ends in '/',
-		//       which is what Java's ZipFile implementation does.
-		const fileName = this.fileName;
-		return (this.externalAttributes & 16 ? true : false) || fileName.charAt(fileName.length - 1) === '/';
+		/* 
+			NOTE: This assumes that the zip file implementation uses the lower byte
+			of external attributes for DOS attributes for backwards-compatibility.
+			This is not mandated, but appears to be commonplace.
+			According to the spec, the layout of external attributes is platform-dependent.
+			If that fails, we also check if the name of the file ends in '/'.
+		*/
+		return (this.externalAttributes & 16 ? true : false) || this.fileName.charAt(this.fileName.length - 1) === '/';
 	}
 	public get isFile(): boolean {
 		return !this.isDirectory;
@@ -155,8 +140,7 @@ getCentralDirectoryEntryAt
 		return (this.flag & 1) == 1;
 	}
 	public get fileData(): Data {
-		// Need to grab the header before we can figure out where the actual
-		// compressed data starts.
+		// Need to grab the header before we can figure out where the actual compressed data starts.
 		const start = this.headerRelativeOffset;
 		const header = new FileHeader(this.zipData.slice(start));
 		return new Data(header, this, this.zipData.slice(start + header.totalSize));

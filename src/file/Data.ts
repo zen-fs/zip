@@ -35,7 +35,7 @@ export class Data {
 			if (!name) {
 				name = 'Unknown: ' + compressionMethod;
 			}
-			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${this.header.fileName}': ${name}`);
+			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${this.header.name}': ${name}`);
 		}
 		return decompress(this.data, this.record.compressedSize, this.record.uncompressedSize, this.record.flag);
 	}

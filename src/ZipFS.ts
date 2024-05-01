@@ -6,7 +6,16 @@ import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { Stats } from '@zenfs/core/stats.js';
 import { CentralDirectory } from './file/CentralDirectory.js';
 import { EndOfCentralDirectory } from './file/EndOfCentralDirectory.js';
-import { TableOfContents } from './file/TableOfContents.js';
+
+/**
+ * Contains the table of contents of a Zip file.
+ */
+export interface TableOfContents {
+	index: FileIndex<CentralDirectory>;
+	entries: CentralDirectory[];
+	eocd: EndOfCentralDirectory;
+	data: ArrayBuffer;
+}
 
 /**
  * Configuration options for a ZipFS file system.
@@ -21,8 +30,6 @@ export interface ZipOptions {
 	 */
 	name?: string;
 }
-
-export const maxDirectoryEntries = 256;
 
 /**
  * Zip file-backed filesystem
@@ -107,7 +114,7 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 	protected static async _computeIndex(data: ArrayBufferLike): Promise<TableOfContents> {
 		const index: FileIndex<CentralDirectory> = new FileIndex<CentralDirectory>();
 		const eocd: EndOfCentralDirectory = ZipFS._getEOCD(data);
-		if (eocd.diskNumber != eocd.cdDiskNumber) {
+		if (eocd.disk != eocd.cdDisk) {
 			throw new ApiError(ErrorCode.EINVAL, 'ZipFS does not support spanned zip files.');
 		}
 
@@ -124,26 +131,26 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 		index: FileIndex<CentralDirectory>,
 		cdPtr: number,
 		cdEnd: number,
-		cdEntries: CentralDirectory[],
+		entries: CentralDirectory[],
 		eocd: EndOfCentralDirectory
 	): Promise<TableOfContents> {
 		if (cdPtr >= cdEnd) {
-			return new TableOfContents(index, cdEntries, eocd, data);
+			return {
+				index,
+				entries,
+				eocd,
+				data,
+			};
 		}
 
-		let count = 0;
-		while (count++ < maxDirectoryEntries && cdPtr < cdEnd) {
+		while (cdPtr < cdEnd) {
 			const cd: CentralDirectory = new CentralDirectory(data, data.slice(cdPtr));
 			ZipFS._addToIndex(cd, index);
 			cdPtr += cd.totalSize;
-			cdEntries.push(cd);
+			entries.push(cd);
 		}
 
-		if (count >= maxDirectoryEntries) {
-			console.warn('Max number of directory entries reached.');
-		}
-
-		return ZipFS._computeIndexResponsive(data, index, cdPtr, cdEnd, cdEntries, eocd);
+		return ZipFS._computeIndexResponsive(data, index, cdPtr, cdEnd, entries, eocd);
 	}
 
 	public _index: FileIndex<CentralDirectory> = new FileIndex<CentralDirectory>();
@@ -155,7 +162,7 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 	protected async _initialize(zipData: ArrayBufferLike): Promise<void> {
 		const zipTOC = await ZipFS._computeIndex(zipData);
 		this._index = zipTOC.index;
-		this._directoryEntries = zipTOC.directoryEntries;
+		this._directoryEntries = zipTOC.entries;
 		this._eocd = zipTOC.eocd;
 		this.data = zipTOC.data;
 		return;

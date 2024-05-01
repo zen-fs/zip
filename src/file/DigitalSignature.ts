@@ -22,7 +22,7 @@ export class DigitalSignature {
 	protected _view: DataView;
 	constructor(private data: ArrayBufferLike) {
 		this._view = new DataView(data);
-		if (this._view.getUint32(0, true) !== 84233040) {
+		if (this._view.getUint32(0, true) != 0x5054b50) {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid digital signature signature: ' + this._view.getUint32(0, true));
 		}
 	}

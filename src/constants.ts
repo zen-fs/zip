@@ -158,5 +158,3 @@ export enum ExternalFileAttributeType {
 	OS_400 = 18,
 	OSX = 19,
 }
-
-export const endOfCentralDirectoryMagic = 101010256;

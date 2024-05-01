@@ -48,9 +48,9 @@ import { msdos2date, safeToString } from '../utils.js';
  */
 export class FileHeader {
 	protected _view: DataView;
-	constructor(private data: ArrayBufferLike) {
+	constructor(protected data: ArrayBufferLike) {
 		this._view = new DataView(data);
-		if (this._view.getUint32(0, true) !== 67324752) {
+		if (this._view.getUint32(0, true) !== 0x4034b50) {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this._view.getUint32(0, true));
 		}
 	}
@@ -63,44 +63,41 @@ export class FileHeader {
 	public get compressionMethod(): CompressionMethod {
 		return this._view.getUint16(8, true);
 	}
-	public get lastModFileTime(): Date {
+	public get lastModified(): Date {
 		// Time and date is in MS-DOS format.
 		return msdos2date(this._view.getUint16(10, true), this._view.getUint16(12, true));
-	}
-	public get rawLastModFileTime(): number {
-		return this._view.getUint32(10, true);
 	}
 	public get crc32(): number {
 		return this._view.getUint32(14, true);
 	}
 	/**
-	 * These two values are COMPLETELY USELESS.
 	 *
 	 * Section 4.4.9:
-	 *   If bit 3 of the general purpose bit flag is set,
-	 *   these fields are set to zero in the local header and the
-	 *   correct values are put in the data descriptor and
-	 *   in the central directory.
+	 * 	If bit 3 of the general purpose bit flag is set,
+	 * 	these fields are set to zero in the local header and the
+	 * 	correct values are put in the data descriptor and
+	 * 	in the central directory.
 	 *
 	 * So we'll just use the central directory's values.
+	 *
 	 */
 	// public compressedSize(): number { return this._view.getUint32(18, true); }
 	// public uncompressedSize(): number { return this._view.getUint32(22, true); }
-	public get fileNameLength(): number {
+	public get nameLength(): number {
 		return this._view.getUint16(26, true);
 	}
-	public get extraFieldLength(): number {
+	public get extraLength(): number {
 		return this._view.getUint16(28, true);
 	}
-	public get fileName(): string {
-		return safeToString(this.data, this.useUTF8, 30, this.fileNameLength);
+	public get name(): string {
+		return safeToString(this.data, this.useUTF8, 30, this.nameLength);
 	}
-	public get extraField(): ArrayBuffer {
-		const start = 30 + this.fileNameLength;
-		return this.data.slice(start, start + this.extraFieldLength);
+	public get extra(): ArrayBuffer {
+		const start = 30 + this.nameLength;
+		return this.data.slice(start, start + this.extraLength);
 	}
 	public get totalSize(): number {
-		return 30 + this.fileNameLength + this.extraFieldLength;
+		return 30 + this.nameLength + this.extraLength;
 	}
 	public get useUTF8(): boolean {
 		return (this.flags & 2048) === 2048;

@@ -27,16 +27,16 @@ import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 
 export class ArchiveExtraDataRecord {
 	protected _view: DataView;
-	constructor(private data: ArrayBufferLike) {
+	constructor(public readonly data: ArrayBufferLike) {
 		this._view = new DataView(data);
 		if (this._view.getUint32(0, true) !== 134630224) {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid archive extra data record signature: ' + this._view.getUint32(0, true));
 		}
 	}
-	public length(): number {
+	public get length(): number {
 		return this._view.getUint32(4, true);
 	}
-	public extraFieldData(): ArrayBuffer {
-		return this.data.slice(8, 8 + this.length());
+	public get extraFieldData(): ArrayBuffer {
+		return this.data.slice(8, 8 + this.length);
 	}
 }

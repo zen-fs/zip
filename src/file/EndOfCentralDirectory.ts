@@ -1,6 +1,5 @@
 import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { safeToString } from '../utils.js';
-import { endOfCentralDirectoryMagic } from '../constants.js';
 
 /**
  * 4.3.16: end of central directory record
@@ -22,16 +21,16 @@ import { endOfCentralDirectoryMagic } from '../constants.js';
 
 export class EndOfCentralDirectory {
 	protected _view: DataView;
-	constructor(private data: ArrayBufferLike) {
+	constructor(protected data: ArrayBufferLike) {
 		this._view = new DataView(data);
-		if (this._view.getUint32(0, true) !== endOfCentralDirectoryMagic) {
-			throw new ApiError(ErrorCode.EINVAL, `Invalid Zip file: End of central directory record has invalid signature: ${this._view.getUint32(0, true)}`);
+		if (this._view.getUint32(0, true) != 0x6054b50) {
+			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: End of central directory record has invalid signature: 0x' + this._view.getUint32(0, true).toString(16));
 		}
 	}
-	public get diskNumber(): number {
+	public get disk(): number {
 		return this._view.getUint16(4, true);
 	}
-	public get cdDiskNumber(): number {
+	public get cdDisk(): number {
 		return this._view.getUint16(6, true);
 	}
 	public get cdDiskEntryCount(): number {
@@ -46,14 +45,11 @@ export class EndOfCentralDirectory {
 	public get cdOffset(): number {
 		return this._view.getUint32(16, true);
 	}
-	public get cdZipCommentLength(): number {
+	public get cdCommentLength(): number {
 		return this._view.getUint16(20, true);
 	}
-	public get cdZipComment(): string {
+	public get cdComment(): string {
 		// Assuming UTF-8. The specification doesn't specify.
-		return safeToString(this.data, true, 22, this.cdZipCommentLength);
-	}
-	public get rawCdZipComment(): ArrayBuffer {
-		return this.data.slice(22, 22 + this.cdZipCommentLength);
+		return safeToString(this.data, true, 22, this.cdCommentLength);
 	}
 }
