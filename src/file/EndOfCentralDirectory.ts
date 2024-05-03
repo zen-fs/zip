@@ -3,21 +3,7 @@ import { safeToString } from '../utils.js';
 import { deserialize, struct, types as t } from 'utilium';
 
 /**
- * 4.3.16: end of central directory record
- *  end of central dir signature    4 bytes  (0x06054b50)
- *  number of this disk             2 bytes
- *  number of the disk with the
- *  start of the central directory  2 bytes
- *  total number of entries in the
- *  central directory on this disk  2 bytes
- *  total number of entries in
- *  the central directory           2 bytes
- *  size of the central directory   4 bytes
- *  offset of start of central
- *  directory with respect to
- *  the starting disk number        4 bytes
- *  .ZIP file comment length        2 bytes
- *  .ZIP file comment       (variable size)
+ * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.16
  */
 export
 @struct()
@@ -31,22 +17,54 @@ class EndOfCentralDirectory {
 
 	@t.uint32 public signature: number;
 
+	/**
+	 * The number of this disk
+	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.19
+	 */
 	@t.uint16 public disk: number;
 
+	/**
+	 * The number of the disk with the central directory
+	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.20
+	 */
 	@t.uint16 public cdDisk: number;
 
+	/**
+	 * Total number of entries in the central directory on this disk
+	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.21
+	 */
 	@t.uint16 public cdDiskEntryCount: number;
 
+	/**
+	 * Total number of entries in the central directory
+	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.22
+	 */
 	@t.uint16 public cdTotalEntryCount: number;
 
+	/**
+	 * Size of the central directory
+	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.23
+	 */
 	@t.uint32 public cdSize: number;
 
+	/**
+	 * Offset of start of central directory with respect to the starting disk number
+	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.24
+	 */
 	@t.uint32 public cdOffset: number;
 
-	@t.uint16 public cdCommentLength: number;
+	/**
+	 * Comment length
+	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.25
+	 */
+	@t.uint16 public commentLength: number;
 
-	public get cdComment(): string {
+	/**
+	 * Comment
+	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.26
+	 */
+	public get comment(): string {
 		// Assuming UTF-8. The specification doesn't specify.
-		return safeToString(this.data, true, 22, this.cdCommentLength);
+		return safeToString(this.data, true, 22, this.commentLength);
 	}
 }

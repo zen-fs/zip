@@ -132,29 +132,3 @@ export const extendedASCIIChars = [
 	'_',
 	' ',
 ];
-/**
- * 4.4.2.2: Indicates the compatibiltiy of a file's external attributes.
- */
-
-export enum ExternalFileAttributeType {
-	MSDOS = 0,
-	AMIGA = 1,
-	OPENVMS = 2,
-	UNIX = 3,
-	VM_CMS = 4,
-	ATARI_ST = 5,
-	OS2_HPFS = 6,
-	MAC = 7,
-	Z_SYSTEM = 8,
-	CP_M = 9,
-	NTFS = 10,
-	MVS = 11,
-	VSE = 12,
-	ACORN_RISC = 13,
-	VFAT = 14,
-	ALT_MVS = 15,
-	BEOS = 16,
-	TANDEM = 17,
-	OS_400 = 18,
-	OSX = 19,
-}

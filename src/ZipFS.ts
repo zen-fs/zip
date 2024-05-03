@@ -34,7 +34,7 @@ export interface ZipOptions {
 /**
  * Zip file-backed filesystem
  * Implemented according to the standard:
- * http://www.pkware.com/documents/casestudies/APPNOTE.TXT
+ * http://pkware.com/documents/casestudies/APPNOTE.TXT
  *
  * While there are a few zip libraries for JavaScript (e.g. JSZip and zip.js),
  * they are not a good match for ZenFS. In particular, these libraries
