@@ -4,8 +4,7 @@ import { type Backend } from '@zenfs/core/backends/backend.js';
 import { NoSyncFile } from '@zenfs/core/file.js';
 import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { Stats } from '@zenfs/core/stats.js';
-import { FileEntry } from './file/CentralDirectory.js';
-import { Header } from './file/EndOfCentralDirectory.js';
+import { FileEntry, Header } from './zip.js';
 
 /**
  * Contains the table of contents of a Zip file.
