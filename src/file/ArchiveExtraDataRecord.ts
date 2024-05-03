@@ -7,7 +7,7 @@ import { deserialize, struct, types as t } from 'utilium';
  */
 export
 @struct()
-class ArchiveExtraDataRecord {
+class ExtraDataRecord {
 	@t.uint32 public signature: number;
 
 	@t.uint32 public length: number;

@@ -2,7 +2,7 @@ import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { FileType, Stats } from '@zenfs/core/stats.js';
 import { CompressionMethod, decompressionMethods } from '../compression.js';
 import { msdos2date, safeToString } from '../utils.js';
-import { FileHeader } from './Header.js';
+import { LocalHeader } from './Header.js';
 import { deserialize, sizeof, struct, types as t } from 'utilium';
 
 /**
@@ -32,11 +32,13 @@ export enum AttributeCompat {
 }
 
 /**
+ * Refered to as a "central directory" record in the spec.
+ * This is a file metadata entry inside the "central directory".
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.12
  */
 export
 @struct()
-class CentralDirectory {
+class FileEntry {
 	constructor(
 		protected zipData: ArrayBufferLike,
 		protected _data: ArrayBufferLike
@@ -47,7 +49,7 @@ class CentralDirectory {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Central directory record has invalid signature: ' + this.signature);
 		}
 
-		const size = sizeof(CentralDirectory);
+		const size = sizeof(FileEntry);
 		this.name = safeToString(this._data, this.useUTF8, size, this.nameLength).replace(/\\/g, '/');
 		this.comment = safeToString(this._data, this.useUTF8, size + this.nameLength + this.extraFieldLength, this.commentLength);
 	}
@@ -207,7 +209,7 @@ class CentralDirectory {
 	public readonly comment: string;
 
 	public get totalSize(): number {
-		return sizeof(CentralDirectory) + this.nameLength + this.extraFieldLength + this.commentLength;
+		return sizeof(FileEntry) + this.nameLength + this.extraFieldLength + this.commentLength;
 	}
 
 	public get isDirectory(): boolean {
@@ -230,7 +232,7 @@ class CentralDirectory {
 	 */
 	public get data(): Uint8Array {
 		// Need to grab the header before we can figure out where the actual compressed data starts.
-		const header = new FileHeader(this.zipData.slice(this.headerRelativeOffset));
+		const header = new LocalHeader(this.zipData.slice(this.headerRelativeOffset));
 		const data = this.zipData.slice(this.headerRelativeOffset + header.totalSize);
 		// Check the compression
 		const { compressionMethod } = header;

@@ -8,7 +8,7 @@ import { deserialize, struct, types as t } from 'utilium';
  */
 export
 @struct()
-class FileHeader {
+class LocalHeader {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature !== 0x04034b50) {

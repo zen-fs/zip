@@ -3,11 +3,13 @@ import { safeToString } from '../utils.js';
 import { deserialize, struct, types as t } from 'utilium';
 
 /**
+ * Overall ZIP file header.
+ * Internally, ZIP files have only a single directory: the "central directory".
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.16
  */
 export
 @struct()
-class EndOfCentralDirectory {
+class Header {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x06054b50) {
@@ -24,34 +26,34 @@ class EndOfCentralDirectory {
 	@t.uint16 public disk: number;
 
 	/**
-	 * The number of the disk with the central directory
+	 * The number of the disk with the start of the entries
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.20
 	 */
-	@t.uint16 public cdDisk: number;
+	@t.uint16 public entriesDisk: number;
 
 	/**
-	 * Total number of entries in the central directory on this disk
+	 * Total number of entries on this disk
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.21
 	 */
-	@t.uint16 public cdDiskEntryCount: number;
+	@t.uint16 public diskEntryCount: number;
 
 	/**
-	 * Total number of entries in the central directory
+	 * Total number of entries
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.22
 	 */
-	@t.uint16 public cdTotalEntryCount: number;
+	@t.uint16 public totalEntryCount: number;
 
 	/**
-	 * Size of the central directory
+	 * Size of the "central directory"
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.23
 	 */
-	@t.uint32 public cdSize: number;
+	@t.uint32 public size: number;
 
 	/**
-	 * Offset of start of central directory with respect to the starting disk number
+	 * Offset of start of "central directory" with respect to the starting disk number
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.24
 	 */
-	@t.uint32 public cdOffset: number;
+	@t.uint32 public offset: number;
 
 	/**
 	 * Comment length

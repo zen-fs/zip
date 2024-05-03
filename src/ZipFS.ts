@@ -4,16 +4,16 @@ import { type Backend } from '@zenfs/core/backends/backend.js';
 import { NoSyncFile } from '@zenfs/core/file.js';
 import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { Stats } from '@zenfs/core/stats.js';
-import { CentralDirectory } from './file/CentralDirectory.js';
-import { EndOfCentralDirectory } from './file/EndOfCentralDirectory.js';
+import { FileEntry } from './file/CentralDirectory.js';
+import { Header } from './file/EndOfCentralDirectory.js';
 
 /**
  * Contains the table of contents of a Zip file.
  */
 export interface TableOfContents {
-	index: FileIndex<CentralDirectory>;
-	entries: CentralDirectory[];
-	eocd: EndOfCentralDirectory;
+	index: FileIndex<FileEntry>;
+	entries: FileEntry[];
+	eocd: Header;
 	data: ArrayBuffer;
 }
 
@@ -60,7 +60,7 @@ export interface ZipOptions {
  *   - Stream it out to a location.
  *   This isn't that bad, so we might do this at a later date.
  */
-export class ZipFS extends SyncIndexFS<CentralDirectory> {
+export class ZipFS extends SyncIndexFS<FileEntry> {
 	/**
 	 * Locates the end of central directory record at the end of the file.
 	 * Throws an exception if it cannot be found.
@@ -76,20 +76,20 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 	 *
 	 * There is no byte alignment on the comment
 	 */
-	protected static _getEOCD(data: ArrayBufferLike): EndOfCentralDirectory {
+	protected static _getEOCD(data: ArrayBufferLike): Header {
 		const view = new DataView(data);
 		const start = 22;
 		const end = Math.min(start + 0xffff, data.byteLength - 1);
 		for (let i = start; i < end; i++) {
 			// Magic number: EOCD Signature
 			if (view.getUint32(data.byteLength - i, true) === 0x6054b50) {
-				return new EndOfCentralDirectory(data.slice(data.byteLength - i));
+				return new Header(data.slice(data.byteLength - i));
 			}
 		}
 		throw new ApiError(ErrorCode.EINVAL, 'Invalid ZIP file: Could not locate End of Central Directory signature.');
 	}
 
-	protected static _addToIndex(cd: CentralDirectory, index: FileIndex<CentralDirectory>) {
+	protected static _addToIndex(cd: FileEntry, index: FileIndex<FileEntry>) {
 		// Paths must be absolute, yet zip file paths are always relative to the
 		// zip root. So we append '/' and call it a day.
 		let filename = cd.name;
@@ -101,31 +101,31 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 			filename = filename.slice(0, -1);
 		}
 
-		index.addFast('/' + filename, cd.isDirectory ? new IndexDirInode<CentralDirectory>(cd) : new IndexFileInode<CentralDirectory>(cd));
+		index.addFast('/' + filename, cd.isDirectory ? new IndexDirInode<FileEntry>(cd) : new IndexFileInode<FileEntry>(cd));
 	}
 
 	protected static async _computeIndex(data: ArrayBufferLike): Promise<TableOfContents> {
-		const index: FileIndex<CentralDirectory> = new FileIndex<CentralDirectory>();
-		const eocd: EndOfCentralDirectory = ZipFS._getEOCD(data);
-		if (eocd.disk != eocd.cdDisk) {
+		const index: FileIndex<FileEntry> = new FileIndex<FileEntry>();
+		const eocd: Header = ZipFS._getEOCD(data);
+		if (eocd.disk != eocd.entriesDisk) {
 			throw new ApiError(ErrorCode.EINVAL, 'ZipFS does not support spanned zip files.');
 		}
 
-		const cdPtr = eocd.cdOffset;
+		const cdPtr = eocd.offset;
 		if (cdPtr === 0xffffffff) {
 			throw new ApiError(ErrorCode.EINVAL, 'ZipFS does not support Zip64.');
 		}
-		const cdEnd = cdPtr + eocd.cdSize;
+		const cdEnd = cdPtr + eocd.size;
 		return ZipFS._computeIndexResponsive(data, index, cdPtr, cdEnd, [], eocd);
 	}
 
 	protected static async _computeIndexResponsive(
 		data: ArrayBufferLike,
-		index: FileIndex<CentralDirectory>,
+		index: FileIndex<FileEntry>,
 		cdPtr: number,
 		cdEnd: number,
-		entries: CentralDirectory[],
-		eocd: EndOfCentralDirectory
+		entries: FileEntry[],
+		eocd: Header
 	): Promise<TableOfContents> {
 		if (cdPtr >= cdEnd) {
 			return {
@@ -137,7 +137,7 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 		}
 
 		while (cdPtr < cdEnd) {
-			const cd: CentralDirectory = new CentralDirectory(data, data.slice(cdPtr));
+			const cd: FileEntry = new FileEntry(data, data.slice(cdPtr));
 			ZipFS._addToIndex(cd, index);
 			cdPtr += cd.totalSize;
 			entries.push(cd);
@@ -146,9 +146,9 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 		return ZipFS._computeIndexResponsive(data, index, cdPtr, cdEnd, entries, eocd);
 	}
 
-	public _index: FileIndex<CentralDirectory> = new FileIndex<CentralDirectory>();
-	private _directoryEntries: CentralDirectory[] = [];
-	private _eocd?: EndOfCentralDirectory = null;
+	public _index: FileIndex<FileEntry> = new FileIndex<FileEntry>();
+	private _directoryEntries: FileEntry[] = [];
+	private _eocd?: Header = null;
 	private data: ArrayBufferLike;
 	public readonly name: string;
 
@@ -186,7 +186,7 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 	/**
 	 * Get the CentralDirectory object for the given path.
 	 */
-	public getCentralDirectoryEntry(path: string): CentralDirectory {
+	public getCentralDirectoryEntry(path: string): FileEntry {
 		const inode = this._index.get(path);
 		if (!inode) {
 			throw ApiError.With('ENOENT', path, 'getCentralDirectoryEntry');
@@ -201,7 +201,7 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 		throw ApiError.With('EPERM', 'Invalid inode: ' + inode, 'getCentralDirectoryEntry');
 	}
 
-	public getCentralDirectoryEntryAt(index: number): CentralDirectory {
+	public getCentralDirectoryEntryAt(index: number): FileEntry {
 		const dirEntry = this._directoryEntries[index];
 		if (!dirEntry) {
 			throw new RangeError('Invalid directory index: ' + index);
@@ -213,15 +213,15 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 		return this._directoryEntries.length;
 	}
 
-	public get endOfCentralDirectory(): EndOfCentralDirectory | null {
+	public get endOfCentralDirectory(): Header | null {
 		return this._eocd;
 	}
 
-	protected statFileInodeSync(inode: IndexFileInode<CentralDirectory>): Stats {
+	protected statFileInodeSync(inode: IndexFileInode<FileEntry>): Stats {
 		return inode.data.stats;
 	}
 
-	protected openFileInodeSync(inode: IndexFileInode<CentralDirectory>, path: string, flag: string): NoSyncFile<this> {
+	protected openFileInodeSync(inode: IndexFileInode<FileEntry>, path: string, flag: string): NoSyncFile<this> {
 		return new NoSyncFile(this, path, flag, this.statFileInodeSync(inode), inode.data.data);
 	}
 }
