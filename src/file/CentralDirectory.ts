@@ -1,8 +1,7 @@
 import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { FileType, Stats } from '@zenfs/core/stats.js';
-import { CompressionMethod } from '../compression.js';
+import { CompressionMethod, decompressionMethods } from '../compression.js';
 import { msdos2date, safeToString } from '../utils.js';
-import { Data } from './Data.js';
 import { FileHeader } from './Header.js';
 import { deserialize, sizeof, struct, types as t } from 'utilium';
 
@@ -226,19 +225,24 @@ class CentralDirectory {
 		return !this.isDirectory;
 	}
 
-	public get fileData(): Data {
-		// Need to grab the header before we can figure out where the actual compressed data starts.
+	/**
+	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.8
+	 */
+	public get data(): Uint8Array {
 		const start = this.headerRelativeOffset;
 		const header = new FileHeader(this.zipData.slice(start));
-		return new Data(header, this, this.zipData.slice(start + header.totalSize));
-	}
 
-	public get data(): Uint8Array {
-		return this.fileData.decompress();
-	}
+		const data = this.zipData.slice(start + header.totalSize);
+		// Check the compression
+		const { compressionMethod } = header;
+		const decompress = decompressionMethods[compressionMethod];
+		if (typeof decompress != 'function') {
+			const name: string = compressionMethod in CompressionMethod ? CompressionMethod[compressionMethod] : compressionMethod.toString();
+			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${header.name}': ${name}`);
+		}
+		return decompress(data, this.compressedSize, this.uncompressedSize, this.flag);
 
-	public get rawData(): ArrayBuffer {
-		return this.fileData.data;
+		// Need to grab the header before we can figure out where the actual compressed data starts.
 	}
 
 	public get stats(): Stats {
