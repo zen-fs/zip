@@ -43,7 +43,7 @@ class EndOfCentralDirectory {
 
 	@t.uint32 public cdOffset: number;
 
-	@t.uint32 public cdCommentLength: number;
+	@t.uint16 public cdCommentLength: number;
 
 	public get cdComment(): string {
 		// Assuming UTF-8. The specification doesn't specify.
