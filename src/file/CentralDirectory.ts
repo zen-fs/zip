@@ -48,8 +48,8 @@ class CentralDirectory {
 		}
 
 		const size = sizeof(CentralDirectory);
-		this.fileName = safeToString(this._data, this.useUTF8, size, this.fileNameLength).replace(/\\/g, '/');
-		this.fileComment = safeToString(this._data, this.useUTF8, size + this.fileNameLength + this.extraFieldLength, this.fileCommentLength);
+		this.name = safeToString(this._data, this.useUTF8, size, this.nameLength).replace(/\\/g, '/');
+		this.comment = safeToString(this._data, this.useUTF8, size + this.nameLength + this.extraFieldLength, this.commentLength);
 	}
 
 	@t.uint32 public signature: number;
@@ -133,7 +133,7 @@ class CentralDirectory {
 	 * The length of the file name
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.10
 	 */
-	@t.uint16 public fileNameLength: number;
+	@t.uint16 public nameLength: number;
 
 	/**
 	 * The length of the extra field
@@ -145,7 +145,7 @@ class CentralDirectory {
 	 * The length of the comment
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.12
 	 */
-	@t.uint16 public fileCommentLength: number;
+	@t.uint16 public commentLength: number;
 
 	/**
 	 * The number of the disk on which this file begins.
@@ -189,14 +189,14 @@ class CentralDirectory {
 	 * To avoid seeking all over the file to recover the known-good filenames from file headers, we simply convert '/' to '\' here.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.17
 	 */
-	public readonly fileName: string;
+	public readonly name: string;
 
 	/**
 	 * This should be used for storage expansion.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.28
 	 */
 	public get extraField(): ArrayBuffer {
-		const offset = 44 + this.fileNameLength;
+		const offset = 44 + this.nameLength;
 		return this._data.slice(offset, offset + this.extraFieldLength);
 	}
 
@@ -204,10 +204,10 @@ class CentralDirectory {
 	 * The comment for this file
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.18
 	 */
-	public readonly fileComment: string;
+	public readonly comment: string;
 
 	public get totalSize(): number {
-		return sizeof(CentralDirectory) + this.fileNameLength + this.extraFieldLength + this.fileCommentLength;
+		return sizeof(CentralDirectory) + this.nameLength + this.extraFieldLength + this.commentLength;
 	}
 
 	public get isDirectory(): boolean {
@@ -218,7 +218,7 @@ class CentralDirectory {
 			According to the spec, the layout of external attributes is platform-dependent.
 			If that fails, we also check if the name of the file ends in '/'.
 		*/
-		return !!(this.externalAttributes & 16) || this.fileName.endsWith('/');
+		return !!(this.externalAttributes & 16) || this.name.endsWith('/');
 	}
 
 	public get isFile(): boolean {
@@ -229,10 +229,9 @@ class CentralDirectory {
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.8
 	 */
 	public get data(): Uint8Array {
-		const start = this.headerRelativeOffset;
-		const header = new FileHeader(this.zipData.slice(start));
-
-		const data = this.zipData.slice(start + header.totalSize);
+		// Need to grab the header before we can figure out where the actual compressed data starts.
+		const header = new FileHeader(this.zipData.slice(this.headerRelativeOffset));
+		const data = this.zipData.slice(this.headerRelativeOffset + header.totalSize);
 		// Check the compression
 		const { compressionMethod } = header;
 		const decompress = decompressionMethods[compressionMethod];
@@ -241,8 +240,6 @@ class CentralDirectory {
 			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${header.name}': ${name}`);
 		}
 		return decompress(data, this.compressedSize, this.uncompressedSize, this.flag);
-
-		// Need to grab the header before we can figure out where the actual compressed data starts.
 	}
 
 	public get stats(): Stats {

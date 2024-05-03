@@ -92,7 +92,7 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 	protected static _addToIndex(cd: CentralDirectory, index: FileIndex<CentralDirectory>) {
 		// Paths must be absolute, yet zip file paths are always relative to the
 		// zip root. So we append '/' and call it a day.
-		let filename = cd.fileName;
+		let filename = cd.name;
 		if (filename[0] == '/') {
 			throw new ApiError(ErrorCode.EPERM, 'Unexpectedly encountered an absolute path in a zip file.');
 		}

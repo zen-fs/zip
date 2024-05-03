@@ -60,11 +60,10 @@ class EndOfCentralDirectory {
 	@t.uint16 public commentLength: number;
 
 	/**
-	 * Comment
+	 * Assuming the content is UTF-8 encoded. The specification doesn't specify.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.26
 	 */
 	public get comment(): string {
-		// Assuming UTF-8. The specification doesn't specify.
 		return safeToString(this.data, true, 22, this.commentLength);
 	}
 }
