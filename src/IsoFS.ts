@@ -92,7 +92,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 	public statSync(p: string): Stats {
 		const record = this._getDirectoryRecord(p);
 		if (!record) {
-			throw ApiError.With('ENOENT', p, 'statSync');
+			throw ApiError.With('ENOENT', p, 'stat');
 		}
 		return this._getStats(p, record)!;
 	}
@@ -105,7 +105,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 
 		const record = this._getDirectoryRecord(path);
 		if (!record) {
-			throw ApiError.With('ENOENT', path, 'openFileSync');
+			throw ApiError.With('ENOENT', path, 'openFile');
 		}
 
 		if (record.isSymlink(this._data)) {
@@ -121,14 +121,14 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		// Check if it exists.
 		const record = this._getDirectoryRecord(path);
 		if (!record) {
-			throw ApiError.With('ENOENT', path, 'readdirSync');
+			throw ApiError.With('ENOENT', path, 'readdir');
 		}
 
 		if (record.isDirectory(this._data)) {
 			return record.getDirectory(this._data).fileList.slice(0);
 		}
 
-		throw ApiError.With('ENOTDIR', path, 'readdirSync');
+		throw ApiError.With('ENOTDIR', path, 'readdir');
 	}
 
 	private _getDirectoryRecord(path: string): DirectoryRecord | null {
