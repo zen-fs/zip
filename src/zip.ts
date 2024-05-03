@@ -2,7 +2,7 @@ import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { FileType, Stats } from '@zenfs/core/stats.js';
 import { deserialize, sizeof, struct, types as t } from 'utilium';
 import { CompressionMethod, decompressionMethods } from './compression.js';
-import { msdos2date, safeToString } from './utils.js';
+import { msdos2date, safeDecode } from './utils.js';
 
 /**
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.2.2
@@ -121,7 +121,7 @@ class LocalFileHeader {
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.17
 	 */
 	public get name(): string {
-		return safeToString(this.data, this.useUTF8, 30, this.nameLength);
+		return safeDecode(this.data, this.useUTF8, 30, this.nameLength);
 	}
 
 	/**
@@ -187,8 +187,8 @@ class FileEntry {
 		}
 
 		const size = sizeof(FileEntry);
-		this.name = safeToString(this._data, this.useUTF8, size, this.nameLength).replace(/\\/g, '/');
-		this.comment = safeToString(this._data, this.useUTF8, size + this.nameLength + this.extraFieldLength, this.commentLength);
+		this.name = safeDecode(this._data, this.useUTF8, size, this.nameLength).replace(/\\/g, '/');
+		this.comment = safeDecode(this._data, this.useUTF8, size + this.nameLength + this.extraLength, this.commentLength);
 	}
 
 	@t.uint32 public signature: number;
@@ -278,7 +278,7 @@ class FileEntry {
 	 * The length of the extra field
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.11
 	 */
-	@t.uint16 public extraFieldLength: number;
+	@t.uint16 public extraLength: number;
 
 	/**
 	 * The length of the comment
@@ -334,9 +334,9 @@ class FileEntry {
 	 * This should be used for storage expansion.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.28
 	 */
-	public get extraField(): ArrayBuffer {
+	public get extra(): ArrayBuffer {
 		const offset = 44 + this.nameLength;
-		return this._data.slice(offset, offset + this.extraFieldLength);
+		return this._data.slice(offset, offset + this.extraLength);
 	}
 
 	/**
@@ -345,10 +345,16 @@ class FileEntry {
 	 */
 	public readonly comment: string;
 
-	public get totalSize(): number {
-		return sizeof(FileEntry) + this.nameLength + this.extraFieldLength + this.commentLength;
+	/**
+	 * The total size of the this entry
+	 */
+	public get size(): number {
+		return sizeof(FileEntry) + this.nameLength + this.extraLength + this.commentLength;
 	}
 
+	/**
+	 * Whether this entry is a directory
+	 */
 	public get isDirectory(): boolean {
 		/* 
 			NOTE: This assumes that the zip file implementation uses the lower byte
@@ -360,11 +366,15 @@ class FileEntry {
 		return !!(this.externalAttributes & 16) || this.name.endsWith('/');
 	}
 
+	/**
+	 * Whether this entry is a file
+	 */
 	public get isFile(): boolean {
 		return !this.isDirectory;
 	}
 
 	/**
+	 * Gets the file data, and decompresses it if needed.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.8
 	 */
 	public get data(): Uint8Array {
@@ -477,6 +487,6 @@ class Header {
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.26
 	 */
 	public get comment(): string {
-		return safeToString(this.data, true, 22, this.commentLength);
+		return safeDecode(this.data, true, 22, this.commentLength);
 	}
 }

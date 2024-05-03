@@ -2,39 +2,38 @@ import { extendedASCIIChars } from './constants.js';
 import { decode } from '@zenfs/core/utils.js';
 
 /**
- * Converts the input time and date in MS-DOS format into a JavaScript Date
- * object.
+ * Converts the input `time` and `date` in MS-DOS format into a `Date`.
+ *
+ * MS-DOS format:
+ * second			5 bits
+ * minute			6 bits
+ * hour				5 bits
+ * day (1-31)		5 bits
+ * month (1-23)		4 bits
+ * year (from 1980)	7 bits
  * @hidden
  */
 export function msdos2date(time: number, date: number): Date {
-	// MS-DOS Date
-	// |0 0 0 0  0|0 0 0  0|0 0 0  0 0 0 0
-	//   D (1-31)  M (1-23)  Y (from 1980)
 	const day = date & 31;
-	// JS date is 0-indexed, DOS is 1-indexed.
 	const month = ((date >> 5) & 15) - 1;
 	const year = (date >> 9) + 1980;
-	// MS DOS Time
-	// |0 0 0 0  0|0 0 0  0 0 0|0  0 0 0 0
-	//    Second      Minute       Hour
 	const second = time & 31;
 	const minute = (time >> 5) & 63;
 	const hour = time >> 11;
 	return new Date(year, month, day, hour, minute, second);
 }
+
 /**
- * Safely returns the string from the buffer, even if it is 0 bytes long.
- * (Normally, calling toString() on a buffer with start === end causes an
- * exception).
+ * Safely decodes the string from a buffer.
  * @hidden
  */
-export function safeToString(buff: ArrayBufferLike | ArrayBufferView, useUTF8: boolean, start: number, length: number): string {
+export function safeDecode(buffer: ArrayBufferLike | ArrayBufferView, utf8: boolean, start: number, length: number): string {
 	if (length === 0) {
 		return '';
 	}
 
-	const uintArray = new Uint8Array('buffer' in buff ? buff.buffer : buff).slice(start, start + length);
-	if (useUTF8) {
+	const uintArray = new Uint8Array('buffer' in buffer ? buffer.buffer : buffer).slice(start, start + length);
+	if (utf8) {
 		return decode(uintArray);
 	} else {
 		return [...uintArray].map(char => (char > 127 ? extendedASCIIChars[char - 128] : String.fromCharCode(char))).join('');

@@ -138,7 +138,7 @@ export class ZipFS extends SyncIndexFS<FileEntry> {
 		while (cdPtr < cdEnd) {
 			const cd: FileEntry = new FileEntry(data, data.slice(cdPtr));
 			ZipFS._addToIndex(cd, index);
-			cdPtr += cd.totalSize;
+			cdPtr += cd.size;
 			entries.push(cd);
 		}
 
