@@ -1,4 +1,5 @@
 import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
+import { deserialize, struct, types as t } from 'utilium';
 
 /**
  * 4.3.13 Digital signature:
@@ -18,17 +19,19 @@ import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
  *    Signature record will be neither compressed nor encrypted.
  */
 
+@struct()
 export class DigitalSignature {
-	protected _view: DataView;
-	constructor(private data: ArrayBufferLike) {
-		this._view = new DataView(data);
-		if (this._view.getUint32(0, true) != 0x5054b50) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid digital signature signature: ' + this._view.getUint32(0, true));
+	constructor(protected data: ArrayBufferLike) {
+		deserialize(this, data);
+		if (this.signature != 0x5054b50) {
+			throw new ApiError(ErrorCode.EINVAL, 'Invalid digital signature signature: ' + this.signature);
 		}
 	}
-	public get size(): number {
-		return this._view.getUint16(4, true);
-	}
+
+	@t.uint32 public signature: number;
+
+	@t.uint16 public size: number;
+
 	public get signatureData(): ArrayBuffer {
 		return this.data.slice(6, 6 + this.size);
 	}

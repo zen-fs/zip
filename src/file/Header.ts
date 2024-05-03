@@ -1,6 +1,7 @@
 import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { CompressionMethod } from '../compression.js';
 import { msdos2date, safeToString } from '../utils.js';
+import { deserialize, struct, types as t } from 'utilium';
 
 /*
    4.3.6 Overall .ZIP file format:
@@ -46,30 +47,34 @@ import { msdos2date, safeToString } from '../utils.js';
  *    file name (variable size)
  *    extra field (variable size)
  */
+
+@struct()
 export class FileHeader {
-	protected _view: DataView;
 	constructor(protected data: ArrayBufferLike) {
-		this._view = new DataView(data);
-		if (this._view.getUint32(0, true) !== 0x4034b50) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this._view.getUint32(0, true));
+		deserialize(this, data);
+		if (this.signature !== 0x4034b50) {
+			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this.signature);
 		}
 	}
-	public get versionNeeded(): number {
-		return this._view.getUint16(4, true);
-	}
-	public get flags(): number {
-		return this._view.getUint16(6, true);
-	}
-	public get compressionMethod(): CompressionMethod {
-		return this._view.getUint16(8, true);
-	}
+
+	@t.uint32 public signature: number;
+
+	@t.uint16 public versionNeeded: number;
+
+	@t.uint16 public flags: number;
+
+	@t.uint16 public compressionMethod: CompressionMethod;
+
+	@t.uint16 protected _time: number;
+
+	@t.uint16 protected _date: number;
+
 	public get lastModified(): Date {
 		// Time and date is in MS-DOS format.
-		return msdos2date(this._view.getUint16(10, true), this._view.getUint16(12, true));
+		return msdos2date(this._time, this._date);
 	}
-	public get crc32(): number {
-		return this._view.getUint32(14, true);
-	}
+
+	@t.uint32 public crc32: number;
 	/**
 	 *
 	 * Section 4.4.9:
@@ -81,14 +86,11 @@ export class FileHeader {
 	 * So we'll just use the central directory's values.
 	 *
 	 */
-	// public compressedSize(): number { return this._view.getUint32(18, true); }
-	// public uncompressedSize(): number { return this._view.getUint32(22, true); }
-	public get nameLength(): number {
-		return this._view.getUint16(26, true);
-	}
-	public get extraLength(): number {
-		return this._view.getUint16(28, true);
-	}
+	@t.uint32 public compressedSize: number;
+	@t.uint32 public uncompressedSize: number;
+
+	@t.uint16 public nameLength: number;
+	@t.uint16 public extraLength: number;
 	public get name(): string {
 		return safeToString(this.data, this.useUTF8, 30, this.nameLength);
 	}

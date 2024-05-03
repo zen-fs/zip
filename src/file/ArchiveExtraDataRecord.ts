@@ -1,4 +1,5 @@
 import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
+import { deserialize, struct, types as t } from 'utilium';
 
 /*
 ` 4.3.10  Archive decryption header:
@@ -25,17 +26,20 @@ import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
  *    directory data structure.
  */
 
+@struct()
 export class ArchiveExtraDataRecord {
-	protected _view: DataView;
+
+	@t.uint32 public signature: number;
+
+	@t.uint32 public length: number;
+
 	constructor(public readonly data: ArrayBufferLike) {
-		this._view = new DataView(data);
-		if (this._view.getUint32(0, true) !== 134630224) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid archive extra data record signature: ' + this._view.getUint32(0, true));
+		deserialize(this, data);
+		if (this.signature !== 134630224) {
+			throw new ApiError(ErrorCode.EINVAL, 'Invalid archive extra data record signature: ' + this.signature);
 		}
 	}
-	public get length(): number {
-		return this._view.getUint32(4, true);
-	}
+
 	public get extraFieldData(): ArrayBuffer {
 		return this.data.slice(8, 8 + this.length);
 	}

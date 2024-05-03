@@ -1,7 +1,7 @@
 import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { CompressionMethod, decompressionMethods } from '../compression.js';
 import { CentralDirectory } from './CentralDirectory.js';
-import { FileHeader as Header } from './Header.js';
+import { FileHeader } from './Header.js';
 
 /**
  * 4.3.8  File data
@@ -18,14 +18,12 @@ import { FileHeader as Header } from './Header.js';
  *   contain no content MUST not include file data.
  */
 export class Data {
-	protected _view: DataView;
 	constructor(
-		public readonly header: Header,
+		public readonly header: FileHeader,
 		public readonly record: CentralDirectory,
 		public readonly data: ArrayBufferLike
-	) {
-		this._view = new DataView(data);
-	}
+	) {}
+
 	public decompress(): Uint8Array {
 		// Check the compression
 		const compressionMethod: CompressionMethod = this.header.compressionMethod;

@@ -4,6 +4,7 @@ import { CompressionMethod } from '../compression.js';
 import { msdos2date, safeToString } from '../utils.js';
 import { Data } from './Data.js';
 import { FileHeader } from './Header.js';
+import { deserialize, struct, types as t } from 'utilium';
 
 /**
  * 4.3.12  Central directory structure:
@@ -31,6 +32,7 @@ import { FileHeader } from './Header.js';
  *  file comment (variable size)
  */
 
+@struct()
 export class CentralDirectory {
 	/*
 	The filename is loaded here, since looking it up is expensive
@@ -47,65 +49,59 @@ export class CentralDirectory {
 	 from file headers, we simply convert '/' to '\' here.
 	*/
 	public readonly fileName: string;
-	protected _view: DataView;
+
+	@t.uint32 public signature: number;
+
 	constructor(
 		protected zipData: ArrayBufferLike,
 		protected _data: ArrayBufferLike
 	) {
-		this._view = new DataView(_data);
+		deserialize(this, _data);
 		// Sanity check.
-		if (this._view.getUint32(0, true) !== 33639248) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Central directory record has invalid signature: ' + this._view.getUint32(0, true));
+		if (this.signature !== 33639248) {
+			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Central directory record has invalid signature: ' + this.signature);
 		}
 
 		this.fileName = safeToString(this._data, this.useUTF8, 46, this.fileNameLength).replace(/\\/g, '/');
 	}
-	public get versionMadeBy(): number {
-		return this._view.getUint16(4, true);
-	}
-	public get versionNeeded(): number {
-		return this._view.getUint16(6, true);
-	}
-	public get flag(): number {
-		return this._view.getUint16(8, true);
-	}
-	public get compressionMethod(): CompressionMethod {
-		return this._view.getUint16(10, true);
-	}
+
+	@t.uint16 public versionMadeBy: number;
+
+	@t.uint16 public versionNeeded: number;
+
+	@t.uint16 public flag: number;
+
+	@t.uint16 public compressionMethod: CompressionMethod;
+
+	@t.uint16 protected _time: number;
+
+	@t.uint16 protected _date: number;
+
 	public get lastModFileTime(): Date {
 		// Time and date is in MS-DOS format.
-		return msdos2date(this._view.getUint16(12, true), this._view.getUint16(14, true));
+		return msdos2date(this._time, this._date);
 	}
-	public get crc32(): number {
-		return this._view.getUint32(16, true);
-	}
-	public get compressedSize(): number {
-		return this._view.getUint32(20, true);
-	}
-	public get uncompressedSize(): number {
-		return this._view.getUint32(24, true);
-	}
-	public get fileNameLength(): number {
-		return this._view.getUint16(28, true);
-	}
-	public get extraFieldLength(): number {
-		return this._view.getUint16(30, true);
-	}
-	public get fileCommentLength(): number {
-		return this._view.getUint16(32, true);
-	}
-	public get diskNumberStart(): number {
-		return this._view.getUint16(34, true);
-	}
-	public get internalAttributes(): number {
-		return this._view.getUint16(36, true);
-	}
-	public get externalAttributes(): number {
-		return this._view.getUint32(38, true);
-	}
-	public get headerRelativeOffset(): number {
-		return this._view.getUint32(42, true);
-	}
+
+	@t.uint32 public crc32: number;
+
+	@t.uint32 public compressedSize: number;
+
+	@t.uint32 public uncompressedSize: number;
+
+	@t.uint16 public fileNameLength: number;
+
+	@t.uint16 public extraFieldLength: number;
+
+	@t.uint16 public fileCommentLength: number;
+
+	@t.uint16 public diskNumberStart: number;
+
+	@t.uint16 public internalAttributes: number;
+
+	@t.uint32 public externalAttributes: number;
+
+	@t.uint32 public headerRelativeOffset: number;
+
 	public get rawFileName(): ArrayBuffer {
 		return this._data.slice(46, 46 + this.fileNameLength);
 	}

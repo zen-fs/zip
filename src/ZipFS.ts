@@ -43,16 +43,6 @@ export interface ZipOptions {
  * strings. Furthermore, these libraries duplicate functionality already present
  * in ZenFS (e.g. UTF-8 decoding and binary data manipulation).
  *
- * This filesystem takes advantage of ZenFS's Uint8Array implementation, which
- * efficiently represents the zip file in memory (in both ArrayUint8Array-enabled
- * browsers *and* non-ArrayUint8Array browsers), and which can neatly be 'sliced'
- * without copying data. Each struct defined in the standard is represented with
- * a buffer slice pointing to an offset in the zip file, and has getters for
- * each field. As we anticipate that this data will not be read often, we choose
- * not to store each struct field in the JavaScript object; instead, to reduce
- * memory consumption, we retrieve it directly from the binary data each time it
- * is requested.
- *
  * When the filesystem is instantiated, we determine the directory structure
  * of the zip file as quickly as possible. We lazily decompress and check the
  * CRC32 of files. We do not cache decompressed files; if this is a desired
@@ -74,23 +64,27 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 	/**
 	 * Locates the end of central directory record at the end of the file.
 	 * Throws an exception if it cannot be found.
+	 * 
+	 * @remarks
+	 * Unfortunately, the comment is variable size and up to 64K in size.
+	 * We assume that the magic signature does not appear in the comment,
+	 * and in the bytes between the comment and the signature.
+	 * Other ZIP implementations make this same assumption,
+	 * since the alternative is to read thread every entry in the file.
+	 * 
+	 * Offsets in this function are negative (i.e. from the end of the file).
+	 * 
+	 * There is no byte alignment on the comment
 	 */
 	protected static _getEOCD(data: ArrayBufferLike): EndOfCentralDirectory {
 		const view = new DataView(data);
-		// Unfortunately, the comment is variable size and up to 64K in size.
-		// We assume that the magic signature does not appear in the comment, and
-		// in the bytes between the comment and the signature. Other ZIP
-		// implementations make this same assumption, since the alternative is to
-		// read thread every entry in the file to get to it. :(
-		// These are *negative* offsets from the end of the file.
 		const startOffset = 22;
 		const endOffset = Math.min(startOffset + 0xffff, data.byteLength - 1);
-		// There's not even a byte alignment guarantee on the comment so we need to
-		// search byte by byte. *grumble grumble*
+		// 
 		for (let i = startOffset; i < endOffset; i++) {
 			// Magic number: EOCD Signature
-			if (view.getUint32(data.byteLength - i, true) === 0x06054b50) {
-				return new EndOfCentralDirectory(data.slice(view.byteLength - i));
+			if (view.getUint32(data.byteLength - i, true) === 0x6054b50) {
+				return new EndOfCentralDirectory(data.slice(data.byteLength - i));
 			}
 		}
 		throw new ApiError(ErrorCode.EINVAL, 'Invalid ZIP file: Could not locate End of Central Directory signature.');
@@ -103,7 +97,7 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 		if (filename[0] == '/') {
 			throw new ApiError(ErrorCode.EPERM, 'Unexpectedly encountered an absolute path in a zip file. Please file a bug.');
 		}
-		// XXX: For the file index, strip the trailing '/'.
+		// For the file index, strip the trailing '/'.
 		if (filename.endsWith('/')) {
 			filename = filename.slice(0, -1);
 		}
