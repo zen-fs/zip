@@ -19,9 +19,9 @@ import { deserialize, struct, types as t } from 'utilium';
  *  .ZIP file comment length        2 bytes
  *  .ZIP file comment       (variable size)
  */
-
+export
 @struct()
-export class EndOfCentralDirectory {
+class EndOfCentralDirectory {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x6054b50) {

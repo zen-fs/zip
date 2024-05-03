@@ -48,8 +48,9 @@ import { deserialize, struct, types as t } from 'utilium';
  *    extra field (variable size)
  */
 
+export
 @struct()
-export class FileHeader {
+class FileHeader {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature !== 0x4034b50) {

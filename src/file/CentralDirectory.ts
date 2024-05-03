@@ -32,8 +32,9 @@ import { deserialize, struct, types as t } from 'utilium';
  *  file comment (variable size)
  */
 
+export
 @struct()
-export class CentralDirectory {
+class CentralDirectory {
 	/*
 	The filename is loaded here, since looking it up is expensive
 

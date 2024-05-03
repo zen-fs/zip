@@ -64,24 +64,23 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 	/**
 	 * Locates the end of central directory record at the end of the file.
 	 * Throws an exception if it cannot be found.
-	 * 
+	 *
 	 * @remarks
 	 * Unfortunately, the comment is variable size and up to 64K in size.
 	 * We assume that the magic signature does not appear in the comment,
 	 * and in the bytes between the comment and the signature.
 	 * Other ZIP implementations make this same assumption,
 	 * since the alternative is to read thread every entry in the file.
-	 * 
+	 *
 	 * Offsets in this function are negative (i.e. from the end of the file).
-	 * 
+	 *
 	 * There is no byte alignment on the comment
 	 */
 	protected static _getEOCD(data: ArrayBufferLike): EndOfCentralDirectory {
 		const view = new DataView(data);
-		const startOffset = 22;
-		const endOffset = Math.min(startOffset + 0xffff, data.byteLength - 1);
-		// 
-		for (let i = startOffset; i < endOffset; i++) {
+		const start = 22;
+		const end = Math.min(start + 0xffff, data.byteLength - 1);
+		for (let i = start; i < end; i++) {
 			// Magic number: EOCD Signature
 			if (view.getUint32(data.byteLength - i, true) === 0x6054b50) {
 				return new EndOfCentralDirectory(data.slice(data.byteLength - i));
@@ -95,7 +94,7 @@ export class ZipFS extends SyncIndexFS<CentralDirectory> {
 		// zip root. So we append '/' and call it a day.
 		let filename = cd.fileName;
 		if (filename[0] == '/') {
-			throw new ApiError(ErrorCode.EPERM, 'Unexpectedly encountered an absolute path in a zip file. Please file a bug.');
+			throw new ApiError(ErrorCode.EPERM, 'Unexpectedly encountered an absolute path in a zip file.');
 		}
 		// For the file index, strip the trailing '/'.
 		if (filename.endsWith('/')) {

@@ -26,9 +26,9 @@ import { deserialize, struct, types as t } from 'utilium';
  *    directory data structure.
  */
 
+export
 @struct()
-export class ArchiveExtraDataRecord {
-
+class ArchiveExtraDataRecord {
 	@t.uint32 public signature: number;
 
 	@t.uint32 public length: number;

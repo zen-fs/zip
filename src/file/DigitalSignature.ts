@@ -19,8 +19,9 @@ import { deserialize, struct, types as t } from 'utilium';
  *    Signature record will be neither compressed nor encrypted.
  */
 
+export
 @struct()
-export class DigitalSignature {
+class DigitalSignature {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x5054b50) {
