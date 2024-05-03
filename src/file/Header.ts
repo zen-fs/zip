@@ -11,7 +11,7 @@ export
 class FileHeader {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
-		if (this.signature !== 0x4034b50) {
+		if (this.signature !== 0x04034b50) {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this.signature);
 		}
 	}

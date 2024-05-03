@@ -44,7 +44,7 @@ class CentralDirectory {
 	) {
 		deserialize(this, _data);
 		// Sanity check.
-		if (this.signature != 0x2014b50) {
+		if (this.signature != 0x02014b50) {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Central directory record has invalid signature: ' + this.signature);
 		}
 

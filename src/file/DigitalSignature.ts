@@ -10,7 +10,7 @@ export
 class DigitalSignature {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
-		if (this.signature != 0x5054b50) {
+		if (this.signature != 0x05054b50) {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid digital signature signature: ' + this.signature);
 		}
 	}

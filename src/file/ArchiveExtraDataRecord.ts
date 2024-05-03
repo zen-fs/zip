@@ -14,7 +14,7 @@ class ArchiveExtraDataRecord {
 
 	constructor(public readonly data: ArrayBufferLike) {
 		deserialize(this, data);
-		if (this.signature != 0x8064b50) {
+		if (this.signature != 0x08064b50) {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid archive extra data record signature: ' + this.signature);
 		}
 	}

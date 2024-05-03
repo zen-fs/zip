@@ -10,7 +10,7 @@ export
 class EndOfCentralDirectory {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
-		if (this.signature != 0x6054b50) {
+		if (this.signature != 0x06054b50) {
 			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: End of central directory record has invalid signature: 0x' + this.signature.toString(16));
 		}
 	}
