@@ -2,7 +2,7 @@ import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
 import { FileType, Stats } from '@zenfs/core/stats.js';
 import { deserialize, sizeof, struct, types as t } from 'utilium';
 import { CompressionMethod, decompressionMethods } from './compression.js';
-import { msdos2date, safeDecode } from './utils.js';
+import { msdosDate, safeDecode } from './utils.js';
 
 /**
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.2.2
@@ -65,12 +65,7 @@ class LocalFileHeader {
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.6
 	 */
-	@t.uint16 protected _time: number;
-
-	/**
-	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.6
-	 */
-	@t.uint16 protected _date: number;
+	@t.uint32 protected datetime: number;
 
 	/**
 	 * The date and time are encoded in standard MS-DOS format.
@@ -78,8 +73,7 @@ class LocalFileHeader {
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.6
 	 */
 	public get lastModified(): Date {
-		// Time and date is in MS-DOS format.
-		return msdos2date(this._time, this._date);
+		return msdosDate(this.datetime);
 	}
 
 	/**
@@ -133,7 +127,7 @@ class LocalFileHeader {
 		return this.data.slice(start, start + this.extraLength);
 	}
 
-	public get totalSize(): number {
+	public get size(): number {
 		return 30 + this.nameLength + this.extraLength;
 	}
 	public get useUTF8(): boolean {
@@ -234,21 +228,15 @@ class FileEntry {
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.6
 	 */
-	@t.uint16 protected _time: number;
-
-	/**
-	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.6
-	 */
-	@t.uint16 protected _date: number;
+	@t.uint32 protected datetime: number;
 
 	/**
 	 * The date and time are encoded in standard MS-DOS format.
 	 * This getter decodes the date.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.6
 	 */
-	public get lastModifiedFileTime(): Date {
-		// Time and date is in MS-DOS format.
-		return msdos2date(this._time, this._date);
+	public get lastModified(): Date {
+		return msdosDate(this.datetime);
 	}
 
 	/**
@@ -290,7 +278,7 @@ class FileEntry {
 	 * The number of the disk on which this file begins.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.13
 	 */
-	@t.uint16 public diskNumberStart: number;
+	@t.uint16 public startDisk: number;
 
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.14
@@ -307,8 +295,8 @@ class FileEntry {
 	@t.uint32 public externalAttributes: number;
 
 	/**
-	 * This is the offset from the start of the first disk on which this file appears,
-	 * to where the local header should be found.
+	 * This is the offset from the start of the first disk on which
+	 * this file appears to where the local header should be found.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.16
 	 */
 	@t.uint32 public headerRelativeOffset: number;
@@ -378,15 +366,14 @@ class FileEntry {
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.8
 	 */
 	public get data(): Uint8Array {
-		// Need to grab the local header before we can figure out where the actual compressed data starts.
-		const header = new LocalFileHeader(this.zipData.slice(this.headerRelativeOffset));
-		const data = this.zipData.slice(this.headerRelativeOffset + header.totalSize);
+		// Get the local header before we can figure out where the actual compressed data starts.
+		const { compressionMethod, size, name } = new LocalFileHeader(this.zipData.slice(this.headerRelativeOffset));
+		const data = this.zipData.slice(this.headerRelativeOffset + size);
 		// Check the compression
-		const { compressionMethod } = header;
 		const decompress = decompressionMethods[compressionMethod];
 		if (typeof decompress != 'function') {
-			const name: string = compressionMethod in CompressionMethod ? CompressionMethod[compressionMethod] : compressionMethod.toString();
-			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${header.name}': ${name}`);
+			const mname: string = compressionMethod in CompressionMethod ? CompressionMethod[compressionMethod] : compressionMethod.toString();
+			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${name}': ${mname}`);
 		}
 		return decompress(data, this.compressedSize, this.uncompressedSize, this.flag);
 	}
@@ -395,7 +382,7 @@ class FileEntry {
 		return new Stats({
 			mode: 0o555 | FileType.FILE,
 			size: this.uncompressedSize,
-			mtimeMs: this.lastModifiedFileTime.getTime(),
+			mtimeMs: this.lastModified.getTime(),
 		});
 	}
 }

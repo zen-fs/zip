@@ -5,22 +5,23 @@ import { decode } from '@zenfs/core/utils.js';
  * Converts the input `time` and `date` in MS-DOS format into a `Date`.
  *
  * MS-DOS format:
- * second			5 bits
+ * second			5 bits (2 second-precision)
  * minute			6 bits
  * hour				5 bits
  * day (1-31)		5 bits
- * month (1-23)		4 bits
+ * month (1-23)		4 bits (MSDOS indexes with 1)
  * year (from 1980)	7 bits
  * @hidden
  */
-export function msdos2date(time: number, date: number): Date {
-	const day = date & 31;
-	const month = ((date >> 5) & 15) - 1;
-	const year = (date >> 9) + 1980;
-	const second = time & 31;
-	const minute = (time >> 5) & 63;
-	const hour = time >> 11;
-	return new Date(year, month, day, hour, minute, second);
+export function msdosDate(datetime: number): Date {
+	return new Date(
+		((datetime >> 25) & 127) + 1980, // year
+		((datetime >> 21) & 15) - 1, // month
+		(datetime >> 16) & 31, // day
+		(datetime >> 11) & 31, // hour
+		(datetime >> 5) & 63, // minute
+		(datetime & 31) * 2 // second
+	);
 }
 
 /**
