@@ -3,7 +3,7 @@
 	"version": "0.1.1",
 	"description": "Iso backend for ZenFS",
 	"main": "dist/index.js",
-	"types": "dist",
+	"types": "src/index.ts",
 	"keywords": [
 		"filesystem",
 		"node",
