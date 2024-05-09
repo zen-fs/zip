@@ -48,5 +48,8 @@
 	},
 	"peerDependencies": {
 		"@zenfs/core": "^0.10.0"
+	},
+	"dependencies": {
+		"utilium": "^0.3.4"
 	}
 }

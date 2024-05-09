@@ -2,12 +2,12 @@ import { ErrnoError, Errno } from '@zenfs/core/error.js';
 import { DirectoryRecord, ISODirectoryRecord, JolietDirectoryRecord } from './DirectoryRecord.js';
 import { getASCIIString, getDate, getJolietString } from './utils.js';
 
-export const enum VolumeDescriptorTypeCode {
+export const enum VolumeDescriptorType {
 	BootRecord = 0,
-	PrimaryVolumeDescriptor = 1,
-	SupplementaryVolumeDescriptor = 2,
-	VolumePartitionDescriptor = 3,
-	VolumeDescriptorSetTerminator = 255,
+	Primary = 1,
+	Supplementary = 2,
+	Partition = 3,
+	SetTerminator = 255,
 }
 
 export class VolumeDescriptor {
@@ -15,7 +15,7 @@ export class VolumeDescriptor {
 	constructor(protected _data: ArrayBuffer) {
 		this._view = new DataView(_data);
 	}
-	public get type(): VolumeDescriptorTypeCode {
+	public get type(): VolumeDescriptorType {
 		return this._view[0];
 	}
 	public get standardIdentifier(): string {
@@ -124,7 +124,7 @@ export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescr
 export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescriptor {
 	constructor(data: ArrayBuffer) {
 		super(data);
-		if (this.type !== VolumeDescriptorTypeCode.PrimaryVolumeDescriptor) {
+		if (this.type !== VolumeDescriptorType.Primary) {
 			throw new ErrnoError(Errno.EIO, `Invalid primary volume descriptor.`);
 		}
 	}
@@ -142,21 +142,21 @@ export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescrip
 export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescriptor {
 	constructor(data: ArrayBuffer) {
 		super(data);
-		if (this.type !== VolumeDescriptorTypeCode.SupplementaryVolumeDescriptor) {
-			throw new ErrnoError(Errno.EIO, `Invalid supplementary volume descriptor.`);
+		if (this.type !== VolumeDescriptorType.Supplementary) {
+			throw new ErrnoError(Errno.EIO, 'Invalid supplementary volume descriptor.');
 		}
-		const escapeSequence = this.escapeSequence();
+		const escapeSequence = this.escapeSequence;
 		const third = escapeSequence[2];
 		// Third character identifies what 'level' of the UCS specification to follow.
 		// We ignore it.
 		if (escapeSequence[0] !== 37 || escapeSequence[1] !== 47 || (third !== 64 && third !== 67 && third !== 69)) {
-			throw new ErrnoError(Errno.EIO, `Unrecognized escape sequence for SupplementaryVolumeDescriptor: ${escapeSequence.toString()}`);
+			throw new ErrnoError(Errno.EIO, 'Unrecognized escape sequence for SupplementaryVolumeDescriptor: ' + escapeSequence.toString());
 		}
 	}
 	public get name() {
 		return 'Joliet';
 	}
-	public escapeSequence(): ArrayBuffer {
+	public get escapeSequence(): ArrayBuffer {
 		return this._data.slice(88, 120);
 	}
 	protected _constructRootDirectoryRecord(data: ArrayBuffer): DirectoryRecord {

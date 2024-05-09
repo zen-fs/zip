@@ -7,7 +7,7 @@ import { NoSyncFile, isWriteable } from '@zenfs/core/file.js';
 import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { FileType, Stats } from '@zenfs/core/stats.js';
 import { DirectoryRecord } from './DirectoryRecord.js';
-import { PrimaryOrSupplementaryVolumeDescriptor, PrimaryVolumeDescriptor, SupplementaryVolumeDescriptor, VolumeDescriptor, VolumeDescriptorTypeCode } from './VolumeDescriptor.js';
+import { PrimaryOrSupplementaryVolumeDescriptor, PrimaryVolumeDescriptor, SupplementaryVolumeDescriptor, VolumeDescriptor, VolumeDescriptorType } from './VolumeDescriptor.js';
 import { PXEntry, TFEntry, TFFlags } from './entries.js';
 
 /**
@@ -55,13 +55,13 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 			const slice = this._data.slice(i);
 			const vd = new VolumeDescriptor(slice);
 			switch (vd.type) {
-				case VolumeDescriptorTypeCode.PrimaryVolumeDescriptor:
+				case VolumeDescriptorType.Primary:
 					candidateVDs.push(new PrimaryVolumeDescriptor(slice));
 					break;
-				case VolumeDescriptorTypeCode.SupplementaryVolumeDescriptor:
+				case VolumeDescriptorType.Supplementary:
 					candidateVDs.push(new SupplementaryVolumeDescriptor(slice));
 					break;
-				case VolumeDescriptorTypeCode.VolumeDescriptorSetTerminator:
+				case VolumeDescriptorType.SetTerminator:
 					vdTerminatorFound = true;
 					break;
 			}
@@ -72,7 +72,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		}
 		for (const v of candidateVDs) {
 			// Take an SVD over a PVD.
-			if (!this._pvd || this._pvd.type !== VolumeDescriptorTypeCode.SupplementaryVolumeDescriptor) {
+			if (!this._pvd || this._pvd.type !== VolumeDescriptorType.Supplementary) {
 				this._pvd = v;
 			}
 		}
