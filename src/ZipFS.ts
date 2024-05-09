@@ -1,4 +1,4 @@
-import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
+import { ErrnoError, Errno } from '@zenfs/core/error.js';
 import { FileIndex, IndexDirInode, IndexFileInode, SyncIndexFS } from '@zenfs/core/backends/Index.js';
 import { type Backend } from '@zenfs/core/backends/backend.js';
 import { NoSyncFile } from '@zenfs/core/file.js';
@@ -85,7 +85,7 @@ export class ZipFS extends SyncIndexFS<FileEntry> {
 				return new Header(data.slice(data.byteLength - i));
 			}
 		}
-		throw new ApiError(ErrorCode.EINVAL, 'Invalid ZIP file: Could not locate End of Central Directory signature.');
+		throw new ErrnoError(Errno.EINVAL, 'Invalid ZIP file: Could not locate End of Central Directory signature.');
 	}
 
 	protected static _addToIndex(cd: FileEntry, index: FileIndex<FileEntry>) {
@@ -93,7 +93,7 @@ export class ZipFS extends SyncIndexFS<FileEntry> {
 		// zip root. So we append '/' and call it a day.
 		let filename = cd.name;
 		if (filename[0] == '/') {
-			throw new ApiError(ErrorCode.EPERM, 'Unexpectedly encountered an absolute path in a zip file.');
+			throw new ErrnoError(Errno.EPERM, 'Unexpectedly encountered an absolute path in a zip file.');
 		}
 		// For the file index, strip the trailing '/'.
 		if (filename.endsWith('/')) {
@@ -107,12 +107,12 @@ export class ZipFS extends SyncIndexFS<FileEntry> {
 		const index: FileIndex<FileEntry> = new FileIndex<FileEntry>();
 		const eocd: Header = ZipFS._getEOCD(data);
 		if (eocd.disk != eocd.entriesDisk) {
-			throw new ApiError(ErrorCode.EINVAL, 'ZipFS does not support spanned zip files.');
+			throw new ErrnoError(Errno.EINVAL, 'ZipFS does not support spanned zip files.');
 		}
 
 		const cdPtr = eocd.offset;
 		if (cdPtr === 0xffffffff) {
-			throw new ApiError(ErrorCode.EINVAL, 'ZipFS does not support Zip64.');
+			throw new ErrnoError(Errno.EINVAL, 'ZipFS does not support Zip64.');
 		}
 		const cdEnd = cdPtr + eocd.size;
 		return ZipFS._computeIndexResponsive(data, index, cdPtr, cdEnd, [], eocd);
@@ -188,7 +188,7 @@ export class ZipFS extends SyncIndexFS<FileEntry> {
 	public getCentralDirectoryEntry(path: string): FileEntry {
 		const inode = this._index.get(path);
 		if (!inode) {
-			throw ApiError.With('ENOENT', path, 'getCentralDirectoryEntry');
+			throw ErrnoError.With('ENOENT', path, 'getCentralDirectoryEntry');
 		}
 		if (inode.isDirectory()) {
 			return inode.data;
@@ -197,7 +197,7 @@ export class ZipFS extends SyncIndexFS<FileEntry> {
 			return inode.data!;
 		}
 		// Should never occur.
-		throw ApiError.With('EPERM', 'Invalid inode: ' + inode, 'getCentralDirectoryEntry');
+		throw ErrnoError.With('EPERM', 'Invalid inode: ' + inode, 'getCentralDirectoryEntry');
 	}
 
 	public getCentralDirectoryEntryAt(index: number): FileEntry {
@@ -235,7 +235,7 @@ export const Zip = {
 			description: 'The zip file as an ArrayBuffer object.',
 			validator(buff: unknown) {
 				if (!(buff instanceof ArrayBuffer)) {
-					throw new ApiError(ErrorCode.EINVAL, 'option must be a ArrayBuffer.');
+					throw new ErrnoError(Errno.EINVAL, 'option must be a ArrayBuffer.');
 				}
 			},
 		},

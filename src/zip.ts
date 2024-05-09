@@ -1,4 +1,4 @@
-import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
+import { ErrnoError, Errno } from '@zenfs/core/error.js';
 import { FileType, Stats } from '@zenfs/core/stats.js';
 import { deserialize, sizeof, struct, types as t } from 'utilium';
 import { CompressionMethod, decompressionMethods } from './compression.js';
@@ -39,7 +39,7 @@ class LocalFileHeader {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature !== 0x04034b50) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this.signature);
+			throw new ErrnoError(Errno.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this.signature);
 		}
 	}
 
@@ -149,7 +149,7 @@ class ExtraDataRecord {
 	constructor(public readonly data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x08064b50) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid archive extra data record signature: ' + this.signature);
+			throw new ErrnoError(Errno.EINVAL, 'Invalid archive extra data record signature: ' + this.signature);
 		}
 	}
 
@@ -177,7 +177,7 @@ class FileEntry {
 		deserialize(this, _data);
 		// Sanity check.
 		if (this.signature != 0x02014b50) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: Central directory record has invalid signature: ' + this.signature);
+			throw new ErrnoError(Errno.EINVAL, 'Invalid Zip file: Central directory record has invalid signature: ' + this.signature);
 		}
 
 		const size = sizeof(FileEntry);
@@ -373,7 +373,7 @@ class FileEntry {
 		const decompress = decompressionMethods[compressionMethod];
 		if (typeof decompress != 'function') {
 			const mname: string = compressionMethod in CompressionMethod ? CompressionMethod[compressionMethod] : compressionMethod.toString();
-			throw new ApiError(ErrorCode.EINVAL, `Invalid compression method on file '${name}': ${mname}`);
+			throw new ErrnoError(Errno.EINVAL, `Invalid compression method on file '${name}': ${mname}`);
 		}
 		return decompress(data, this.compressedSize, this.uncompressedSize, this.flag);
 	}
@@ -397,7 +397,7 @@ class DigitalSignature {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x05054b50) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid digital signature signature: ' + this.signature);
+			throw new ErrnoError(Errno.EINVAL, 'Invalid digital signature signature: ' + this.signature);
 		}
 	}
 
@@ -421,7 +421,7 @@ class Header {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x06054b50) {
-			throw new ApiError(ErrorCode.EINVAL, 'Invalid Zip file: End of central directory record has invalid signature: 0x' + this.signature.toString(16));
+			throw new ErrnoError(Errno.EINVAL, 'Invalid Zip file: End of central directory record has invalid signature: 0x' + this.signature.toString(16));
 		}
 	}
 
