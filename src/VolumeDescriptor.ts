@@ -1,4 +1,4 @@
-import { ApiError, ErrorCode } from '@zenfs/core/index.js';
+import { ErrnoError, Errno } from '@zenfs/core/error.js';
 import { DirectoryRecord, ISODirectoryRecord, JolietDirectoryRecord } from './DirectoryRecord.js';
 import { getASCIIString, getDate, getJolietString } from './utils.js';
 
@@ -125,7 +125,7 @@ export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescrip
 	constructor(data: ArrayBuffer) {
 		super(data);
 		if (this.type !== VolumeDescriptorTypeCode.PrimaryVolumeDescriptor) {
-			throw new ApiError(ErrorCode.EIO, `Invalid primary volume descriptor.`);
+			throw new ErrnoError(Errno.EIO, `Invalid primary volume descriptor.`);
 		}
 	}
 	public get name() {
@@ -143,14 +143,14 @@ export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeD
 	constructor(data: ArrayBuffer) {
 		super(data);
 		if (this.type !== VolumeDescriptorTypeCode.SupplementaryVolumeDescriptor) {
-			throw new ApiError(ErrorCode.EIO, `Invalid supplementary volume descriptor.`);
+			throw new ErrnoError(Errno.EIO, `Invalid supplementary volume descriptor.`);
 		}
 		const escapeSequence = this.escapeSequence();
 		const third = escapeSequence[2];
 		// Third character identifies what 'level' of the UCS specification to follow.
 		// We ignore it.
 		if (escapeSequence[0] !== 37 || escapeSequence[1] !== 47 || (third !== 64 && third !== 67 && third !== 69)) {
-			throw new ApiError(ErrorCode.EIO, `Unrecognized escape sequence for SupplementaryVolumeDescriptor: ${escapeSequence.toString()}`);
+			throw new ErrnoError(Errno.EIO, `Unrecognized escape sequence for SupplementaryVolumeDescriptor: ${escapeSequence.toString()}`);
 		}
 	}
 	public get name() {

@@ -1,4 +1,4 @@
-import { ApiError, ErrorCode } from '@zenfs/core/ApiError.js';
+import { ErrnoError, Errno } from '@zenfs/core/error.js';
 import type { Backend } from '@zenfs/core/backends/backend.js';
 import type { Cred } from '@zenfs/core/cred.js';
 import * as path from '@zenfs/core/emulation/path.js';
@@ -68,7 +68,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 			i += 2048;
 		}
 		if (candidateVDs.length === 0) {
-			throw new ApiError(ErrorCode.EIO, `Unable to find a suitable volume descriptor.`);
+			throw new ErrnoError(Errno.EIO, `Unable to find a suitable volume descriptor.`);
 		}
 		for (const v of candidateVDs) {
 			// Take an SVD over a PVD.
@@ -92,7 +92,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 	public statSync(p: string): Stats {
 		const record = this._getDirectoryRecord(p);
 		if (!record) {
-			throw ApiError.With('ENOENT', p, 'stat');
+			throw ErrnoError.With('ENOENT', p, 'stat');
 		}
 		return this._getStats(p, record)!;
 	}
@@ -100,12 +100,12 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 	public openFileSync(path: string, flag: string, cred: Cred): NoSyncFile<this> {
 		if (isWriteable(flag)) {
 			// Cannot write to RO file systems.
-			throw new ApiError(ErrorCode.EPERM, path);
+			throw new ErrnoError(Errno.EPERM, path);
 		}
 
 		const record = this._getDirectoryRecord(path);
 		if (!record) {
-			throw ApiError.With('ENOENT', path, 'openFile');
+			throw ErrnoError.With('ENOENT', path, 'openFile');
 		}
 
 		if (record.isSymlink(this._data)) {
@@ -121,14 +121,14 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		// Check if it exists.
 		const record = this._getDirectoryRecord(path);
 		if (!record) {
-			throw ApiError.With('ENOENT', path, 'readdir');
+			throw ErrnoError.With('ENOENT', path, 'readdir');
 		}
 
 		if (record.isDirectory(this._data)) {
 			return record.getDirectory(this._data).fileList.slice(0);
 		}
 
-		throw ApiError.With('ENOTDIR', path, 'readdir');
+		throw ErrnoError.With('ENOTDIR', path, 'readdir');
 	}
 
 	private _getDirectoryRecord(path: string): DirectoryRecord | null {
