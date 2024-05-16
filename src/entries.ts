@@ -1,74 +1,77 @@
+import { deserialize, struct, types as t } from 'utilium';
 import { SLComponentRecord } from './SLComponentRecord.js';
 import { TGetString, getASCIIString, getDate, getShortFormDate } from './utils.js';
 
-export const enum SystemUseEntrySignatures {
-	CE = 17221,
-	PD = 20548,
-	SP = 21328,
-	ST = 21332,
-	ER = 17746,
-	ES = 17747,
-	PX = 20568,
-	PN = 20558,
-	SL = 21324,
-	NM = 20045,
-	CL = 17228,
-	PL = 20556,
-	RE = 21061,
-	TF = 21574,
-	SF = 21318,
-	RR = 21074,
+export const enum EntrySignature {
+	CE = 0x4345,
+	PD = 0x5044,
+	SP = 0x5350,
+	ST = 0x5354,
+	ER = 0x4552,
+	ES = 0x4553,
+	PX = 0x5058,
+	PN = 0x504e,
+	SL = 0x534c,
+	NM = 0x4e4d,
+	CL = 0x434c,
+	PL = 0x504c,
+	RE = 0x5245,
+	TF = 0x5446,
+	SF = 0x5346,
+	RR = 0x5252,
 }
 
-export class SystemUseEntry {
-	protected _view: DataView;
-	constructor(protected data: ArrayBuffer) {
-		this._view = new DataView(data);
+/**
+ * Note, GNU ISO is used for reference.
+ * @see https://git.savannah.gnu.org/cgit/libcdio.git/tree/include/cdio/rock.h
+ */
+
+/**
+ * Base system use entry
+ */
+export
+@struct()
+class SystemUseEntry {
+	public constructor(protected data: ArrayBuffer) {
+		deserialize(this, data);
 	}
-	public signatureWord(): SystemUseEntrySignatures {
-		return this._view.getUint16(0);
-	}
-	public signatureWordString(): string {
+
+	@t.uint16 public signature: EntrySignature;
+
+	public get signatureString(): string {
 		return getASCIIString(this.data, 0, 2);
 	}
-	public length(): number {
-		return this._view[2];
-	}
-	public suVersion(): number {
-		return this._view[3];
-	}
+
+	@t.uint8 public length: number;
+
+	@t.uint8 public suVersion: number;
 }
+
 /**
  * Continuation entry.
  */
-
 export class CEEntry extends SystemUseEntry {
-	private _entries: SystemUseEntry[] | null = null;
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
+	protected _entries: SystemUseEntry[] = [];
+
 	/**
 	 * Logical block address of the continuation area.
 	 */
-	public continuationLba(): number {
-		return this._view.getUint32(4, true);
-	}
+	@t.uint64 public extent: bigint;
+
 	/**
 	 * Offset into the logical block.
 	 */
-	public continuationLbaOffset(): number {
-		return this._view.getUint32(12, true);
-	}
+	@t.uint64 public offset: bigint;
+
 	/**
 	 * Length of the continuation area.
 	 */
-	public continuationLength(): number {
-		return this._view.getUint32(20, true);
-	}
-	public getEntries(isoData: ArrayBuffer): SystemUseEntry[] {
+	@t.uint64 public size: bigint;
+
+	public entries(data: ArrayBuffer): SystemUseEntry[] {
 		if (!this._entries) {
-			const start = this.continuationLba() * 2048 + this.continuationLbaOffset();
-			this._entries = constructSystemUseEntries(isoData, start, this.continuationLength(), isoData);
+			const start = this.extent * 2048n + this.offset;
+			this._entries = constructSystemUseEntries(data, start, this.size, data);
 		}
 		return this._entries;
 	}
@@ -77,124 +80,81 @@ export class CEEntry extends SystemUseEntry {
 /**
  * Padding entry.
  */
-export class PDEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-}
+export class PDEntry extends SystemUseEntry {}
 
 /**
  * Identifies that SUSP is in-use.
  */
-
 export class SPEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
+	@t.uint8(2) public magic: number;
+
+	public checkMagic(): boolean {
+		return this.magic[0] == 190 && this.magic[1] == 239;
 	}
-	public checkBytesPass(): boolean {
-		return this._view[4] === 190 && this._view[5] === 239;
-	}
-	public bytesSkipped(): number {
-		return this._view[6];
-	}
+
+	@t.uint8 public skip: number;
 }
 
 /**
  * Identifies the end of the SUSP entries.
  */
-export class STEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-}
+export class STEntry extends SystemUseEntry {}
 
 /**
  * Specifies system-specific extensions to SUSP.
  */
-
 export class EREntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
+	@t.uint8 public idLength: number;
+
+	@t.uint8 public descriptorLength: number;
+
+	@t.uint8 public sourceLength: number;
+
+	@t.uint8 public extensionVersion: number;
+
+	public get extensionIdentifier(): string {
+		return getASCIIString(this.data, 8, this.idLength);
 	}
-	public identifierLength(): number {
-		return this._view[4];
+	public get extensionDescriptor(): string {
+		return getASCIIString(this.data, 8 + this.idLength, this.descriptorLength);
 	}
-	public descriptorLength(): number {
-		return this._view[5];
-	}
-	public sourceLength(): number {
-		return this._view[6];
-	}
-	public extensionVersion(): number {
-		return this._view[7];
-	}
-	public extensionIdentifier(): string {
-		return getASCIIString(this.data, 8, this.identifierLength());
-	}
-	public extensionDescriptor(): string {
-		return getASCIIString(this.data, 8 + this.identifierLength(), this.descriptorLength());
-	}
-	public extensionSource(): string {
-		return getASCIIString(this.data, 8 + this.identifierLength() + this.descriptorLength(), this.sourceLength());
+	public get extensionSource(): string {
+		return getASCIIString(this.data, 8 + this.idLength + this.descriptorLength, this.sourceLength);
 	}
 }
 
 export class ESEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-	public extensionSequence(): number {
-		return this._view[4];
-	}
+	@t.uint8 public extensionSequence: number;
 }
 
 /**
  * RockRidge: Marks that RockRidge is in use [deprecated]
  */
 
-export class RREntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-}
+export class RREntry extends SystemUseEntry {}
 
 /**
  * RockRidge: Records POSIX file attributes.
  */
 export class PXEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-	public mode(): number {
-		return this._view.getUint32(4, true);
-	}
-	public fileLinks(): number {
-		return this._view.getUint32(12, true);
-	}
-	public uid(): number {
-		return this._view.getUint32(20, true);
-	}
-	public gid(): number {
-		return this._view.getUint32(28, true);
-	}
-	public inode(): number {
-		return this._view.getUint32(36, true);
-	}
+	@t.uint64 public mode: bigint;
+
+	@t.uint64 public nlinks: bigint;
+
+	@t.uint64 public uid: bigint;
+
+	@t.uint64 public gid: bigint;
+
+	@t.uint64 public inode: bigint;
 }
 
 /**
  * RockRidge: Records POSIX device number.
  */
 export class PNEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-	public devTHigh(): number {
-		return this._view.getUint32(4, true);
-	}
-	public devTLow(): number {
-		return this._view.getUint32(12, true);
-	}
+	@t.uint64 public dev_high: bigint;
+
+	@t.uint64 public dev_low: bigint;
 }
 
 /**
@@ -202,19 +162,15 @@ export class PNEntry extends SystemUseEntry {
  */
 
 export class SLEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-	public get flags(): number {
-		return this._view[4];
-	}
+	@t.uint8 public flags: number;
+
 	public get continueFlag(): number {
 		return this.flags & 1;
 	}
 	public get componentRecords(): SLComponentRecord[] {
-		const records = new Array<SLComponentRecord>();
+		const records = [];
 		let i = 5;
-		while (i < this.length()) {
+		while (i < this.length) {
 			const record = new SLComponentRecord(this.data.slice(i));
 			records.push(record);
 			i += record.length;
@@ -223,67 +179,67 @@ export class SLEntry extends SystemUseEntry {
 	}
 }
 
-export function constructSystemUseEntry(bigData: ArrayBuffer, i: number): SystemUseEntry {
-	const data = bigData.slice(i);
+export function constructSystemUseEntry(_data: ArrayBuffer, i: bigint): SystemUseEntry {
+	const data = _data.slice(Number(i));
 	const sue = new SystemUseEntry(data);
-	switch (sue.signatureWord()) {
-		case SystemUseEntrySignatures.CE:
+	switch (sue.signature) {
+		case EntrySignature.CE:
 			return new CEEntry(data);
-		case SystemUseEntrySignatures.PD:
+		case EntrySignature.PD:
 			return new PDEntry(data);
-		case SystemUseEntrySignatures.SP:
+		case EntrySignature.SP:
 			return new SPEntry(data);
-		case SystemUseEntrySignatures.ST:
+		case EntrySignature.ST:
 			return new STEntry(data);
-		case SystemUseEntrySignatures.ER:
+		case EntrySignature.ER:
 			return new EREntry(data);
-		case SystemUseEntrySignatures.ES:
+		case EntrySignature.ES:
 			return new ESEntry(data);
-		case SystemUseEntrySignatures.PX:
+		case EntrySignature.PX:
 			return new PXEntry(data);
-		case SystemUseEntrySignatures.PN:
+		case EntrySignature.PN:
 			return new PNEntry(data);
-		case SystemUseEntrySignatures.SL:
+		case EntrySignature.SL:
 			return new SLEntry(data);
-		case SystemUseEntrySignatures.NM:
+		case EntrySignature.NM:
 			return new NMEntry(data);
-		case SystemUseEntrySignatures.CL:
+		case EntrySignature.CL:
 			return new CLEntry(data);
-		case SystemUseEntrySignatures.PL:
+		case EntrySignature.PL:
 			return new PLEntry(data);
-		case SystemUseEntrySignatures.RE:
+		case EntrySignature.RE:
 			return new REEntry(data);
-		case SystemUseEntrySignatures.TF:
+		case EntrySignature.TF:
 			return new TFEntry(data);
-		case SystemUseEntrySignatures.SF:
+		case EntrySignature.SF:
 			return new SFEntry(data);
-		case SystemUseEntrySignatures.RR:
+		case EntrySignature.RR:
 			return new RREntry(data);
 		default:
 			return sue;
 	}
 }
 
-export function constructSystemUseEntries(data: ArrayBuffer, i: number, len: number, isoData: ArrayBuffer): SystemUseEntry[] {
+export function constructSystemUseEntries(data: ArrayBuffer, i: bigint, len: bigint, isoData: ArrayBuffer): SystemUseEntry[] {
 	// If the remaining allocated space following the last recorded System Use Entry in a System
 	// Use field or Continuation Area is less than four bytes long, it cannot contain a System
 	// Use Entry and shall be ignored
-	len = len - 4;
-	let entries = new Array<SystemUseEntry>();
+	len -= 4n;
+	let entries = [];
 	while (i < len) {
 		const entry = constructSystemUseEntry(data, i);
-		const length = entry.length();
-		if (length === 0) {
+		const length = entry.length;
+		if (!length) {
 			// Invalid SU section; prevent infinite loop.
 			return entries;
 		}
-		i += length;
+		i += BigInt(length);
 		if (entry instanceof STEntry) {
 			// ST indicates the end of entries.
 			break;
 		}
 		if (entry instanceof CEEntry) {
-			entries = entries.concat(entry.getEntries(isoData));
+			entries = entries.concat(entry.entries(isoData));
 		} else {
 			entries.push(entry);
 		}
@@ -305,11 +261,11 @@ export class NMEntry extends SystemUseEntry {
 	constructor(data: ArrayBuffer) {
 		super(data);
 	}
-	public flags(): NMFlags {
-		return this._view[4];
-	}
+
+	@t.uint8 public flags: NMFlags;
+
 	public name(getString: TGetString): string {
-		return getString(this.data, 5, this.length() - 5);
+		return getString(this.data, 5, this.length - 5);
 	}
 }
 
@@ -318,12 +274,7 @@ export class NMEntry extends SystemUseEntry {
  */
 
 export class CLEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-	public childDirectoryLba(): number {
-		return this._view.getUint32(4, true);
-	}
+	@t.uint32 public childDirectoryLba: number;
 }
 
 /**
@@ -331,23 +282,14 @@ export class CLEntry extends SystemUseEntry {
  */
 
 export class PLEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-	public parentDirectoryLba(): number {
-		return this._view.getUint32(4, true);
-	}
+	@t.uint32 public parentDirectoryLba: number;
 }
 
 /**
  * RockRidge: Records relocated directory.
  */
 
-export class REEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-}
+export class REEntry extends SystemUseEntry {}
 
 export const enum TFFlags {
 	CREATION = 1,
@@ -364,14 +306,10 @@ export const enum TFFlags {
  */
 
 export class TFEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-	public flags(): number {
-		return this._view[4];
-	}
-	public creation(): Date | null {
-		if (this.flags() & TFFlags.CREATION) {
+	@t.uint8 public flags: number;
+
+	public get creation(): Date | undefined {
+		if (this.flags & TFFlags.CREATION) {
 			if (this._longFormDates()) {
 				return getDate(this.data, 5);
 			} else {
@@ -381,78 +319,73 @@ export class TFEntry extends SystemUseEntry {
 			return null;
 		}
 	}
-	public modify(): Date | null {
-		if (this.flags() & TFFlags.MODIFY) {
-			const previousDates = this.flags() & TFFlags.CREATION ? 1 : 0;
-			if (this._longFormDates()) {
-				return getDate(this.data, 5 + previousDates * 17);
-			} else {
-				return getShortFormDate(this.data, 5 + previousDates * 7);
-			}
+	public get modify(): Date | undefined {
+		if (!(this.flags & TFFlags.MODIFY)) {
+			return;
+		}
+		const previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
+		if (this._longFormDates()) {
+			return getDate(this.data, 5 + previousDates * 17);
 		} else {
-			return null;
+			return getShortFormDate(this.data, 5 + previousDates * 7);
 		}
 	}
-	public access(): Date | null {
-		if (this.flags() & TFFlags.ACCESS) {
-			let previousDates = this.flags() & TFFlags.CREATION ? 1 : 0;
-			previousDates += this.flags() & TFFlags.MODIFY ? 1 : 0;
-			if (this._longFormDates()) {
-				return getDate(this.data, 5 + previousDates * 17);
-			} else {
-				return getShortFormDate(this.data, 5 + previousDates * 7);
-			}
+	public get access(): Date | undefined {
+		if (!(this.flags & TFFlags.ACCESS)) {
+			return;
+		}
+		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
+		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
+		if (this._longFormDates()) {
+			return getDate(this.data, 5 + previousDates * 17);
 		} else {
-			return null;
+			return getShortFormDate(this.data, 5 + previousDates * 7);
 		}
 	}
-	public backup(): Date | null {
-		if (this.flags() & TFFlags.BACKUP) {
-			let previousDates = this.flags() & TFFlags.CREATION ? 1 : 0;
-			previousDates += this.flags() & TFFlags.MODIFY ? 1 : 0;
-			previousDates += this.flags() & TFFlags.ACCESS ? 1 : 0;
-			if (this._longFormDates()) {
-				return getDate(this.data, 5 + previousDates * 17);
-			} else {
-				return getShortFormDate(this.data, 5 + previousDates * 7);
-			}
+	public get backup(): Date | undefined {
+		if (!(this.flags & TFFlags.BACKUP)) {
+			return;
+		}
+		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
+		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
+		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
+		if (this._longFormDates()) {
+			return getDate(this.data, 5 + previousDates * 17);
 		} else {
-			return null;
+			return getShortFormDate(this.data, 5 + previousDates * 7);
 		}
 	}
-	public expiration(): Date | null {
-		if (this.flags() & TFFlags.EXPIRATION) {
-			let previousDates = this.flags() & TFFlags.CREATION ? 1 : 0;
-			previousDates += this.flags() & TFFlags.MODIFY ? 1 : 0;
-			previousDates += this.flags() & TFFlags.ACCESS ? 1 : 0;
-			previousDates += this.flags() & TFFlags.BACKUP ? 1 : 0;
-			if (this._longFormDates()) {
-				return getDate(this.data, 5 + previousDates * 17);
-			} else {
-				return getShortFormDate(this.data, 5 + previousDates * 7);
-			}
+	public get expiration(): Date | undefined {
+		if (!(this.flags & TFFlags.EXPIRATION)) {
+			return;
+		}
+		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
+		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
+		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
+		previousDates += this.flags & TFFlags.BACKUP ? 1 : 0;
+		if (this._longFormDates()) {
+			return getDate(this.data, 5 + previousDates * 17);
 		} else {
-			return null;
+			return getShortFormDate(this.data, 5 + previousDates * 7);
 		}
 	}
-	public effective(): Date | null {
-		if (this.flags() & TFFlags.EFFECTIVE) {
-			let previousDates = this.flags() & TFFlags.CREATION ? 1 : 0;
-			previousDates += this.flags() & TFFlags.MODIFY ? 1 : 0;
-			previousDates += this.flags() & TFFlags.ACCESS ? 1 : 0;
-			previousDates += this.flags() & TFFlags.BACKUP ? 1 : 0;
-			previousDates += this.flags() & TFFlags.EXPIRATION ? 1 : 0;
-			if (this._longFormDates()) {
-				return getDate(this.data, 5 + previousDates * 17);
-			} else {
-				return getShortFormDate(this.data, 5 + previousDates * 7);
-			}
+	public get effective(): Date | undefined {
+		if (!(this.flags & TFFlags.EFFECTIVE)) {
+			return;
+		}
+		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
+		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
+		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
+		previousDates += this.flags & TFFlags.BACKUP ? 1 : 0;
+		previousDates += this.flags & TFFlags.EXPIRATION ? 1 : 0;
+		if (this._longFormDates()) {
+			return getDate(this.data, 5 + previousDates * 17);
 		} else {
-			return null;
+			return getShortFormDate(this.data, 5 + previousDates * 7);
 		}
 	}
 	private _longFormDates(): boolean {
-		return !!(this.flags() && TFFlags.LONG_FORM);
+		return !!(this.flags && TFFlags.LONG_FORM);
 	}
 }
 
@@ -461,16 +394,9 @@ export class TFEntry extends SystemUseEntry {
  */
 
 export class SFEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-	public virtualSizeHigh(): number {
-		return this._view.getUint32(4, true);
-	}
-	public virtualSizeLow(): number {
-		return this._view.getUint32(12, true);
-	}
-	public tableDepth(): number {
-		return this._view[20];
-	}
+	@t.uint64 public virtualSizeHigh: bigint;
+
+	@t.uint64 public virtualSizeLow: bigint;
+
+	@t.uint8 public tableDepth: number;
 }

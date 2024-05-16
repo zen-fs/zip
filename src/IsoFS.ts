@@ -1,7 +1,6 @@
 import { ErrnoError, Errno } from '@zenfs/core/error.js';
 import type { Backend } from '@zenfs/core/backends/backend.js';
 import type { Cred } from '@zenfs/core/cred.js';
-import * as path from '@zenfs/core/emulation/path.js';
 import { resolve } from '@zenfs/core/emulation/path.js';
 import { NoSyncFile, isWriteable } from '@zenfs/core/file.js';
 import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
@@ -89,12 +88,12 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		};
 	}
 
-	public statSync(p: string): Stats {
-		const record = this._getDirectoryRecord(p);
+	public statSync(path: string): Stats {
+		const record = this._getDirectoryRecord(path);
 		if (!record) {
-			throw ErrnoError.With('ENOENT', p, 'stat');
+			throw ErrnoError.With('ENOENT', path, 'stat');
 		}
-		return this._getStats(p, record)!;
+		return this._getStats(path, record)!;
 	}
 
 	public openFileSync(path: string, flag: string, cred: Cred): NoSyncFile<this> {
@@ -150,9 +149,9 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		return dir;
 	}
 
-	private _getStats(p: string, record: DirectoryRecord): Stats | null {
+	private _getStats(path: string, record: DirectoryRecord): Stats | null {
 		if (record.isSymlink(this._data)) {
-			const newP = path.resolve(p, record.getSymlinkPath(this._data));
+			const newP = resolve(path, record.getSymlinkPath(this._data));
 			const dirRec = this._getDirectoryRecord(newP);
 			if (!dirRec) {
 				return null;
@@ -169,22 +168,22 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 			const entries = record.getSUEntries(this._data);
 			for (const entry of entries) {
 				if (entry instanceof PXEntry) {
-					mode = entry.mode();
+					mode = Number(entry.mode);
 					continue;
 				}
 
 				if (!(entry instanceof TFEntry)) {
 					continue;
 				}
-				const flags = entry.flags();
+				const flags = entry.flags;
 				if (flags & TFFlags.ACCESS) {
-					atimeMs = entry.access()!.getTime();
+					atimeMs = entry.access!.getTime();
 				}
 				if (flags & TFFlags.MODIFY) {
-					mtimeMs = entry.modify()!.getTime();
+					mtimeMs = entry.modify!.getTime();
 				}
 				if (flags & TFFlags.CREATION) {
-					ctimeMs = entry.creation()!.getTime();
+					ctimeMs = entry.creation!.getTime();
 				}
 			}
 		}
@@ -223,4 +222,4 @@ export const Iso = {
 	create(options: IsoOptions) {
 		return new IsoFS(options);
 	},
-} satisfies Backend<IsoFS, IsoOptions>;
+} as const satisfies Backend<IsoFS, IsoOptions>;

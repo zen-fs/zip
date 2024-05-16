@@ -169,13 +169,13 @@ export abstract class DirectoryRecord {
 	protected abstract _constructDirectory(isoData: ArrayBuffer): Directory<DirectoryRecord>;
 	protected _rockRidgeFilename(isoData: ArrayBuffer): string | null {
 		const nmEntries = <NMEntry[]>this.getSUEntries(isoData).filter(e => e instanceof NMEntry);
-		if (nmEntries.length === 0 || nmEntries[0].flags() & (NMFlags.CURRENT | NMFlags.PARENT)) {
+		if (nmEntries.length === 0 || nmEntries[0].flags & (NMFlags.CURRENT | NMFlags.PARENT)) {
 			return null;
 		}
 		let str = '';
 		for (const e of nmEntries) {
 			str += e.name(this._getString);
-			if (!(e.flags() & NMFlags.CONTINUE)) {
+			if (!(e.flags & NMFlags.CONTINUE)) {
 				break;
 			}
 		}
@@ -188,7 +188,7 @@ export abstract class DirectoryRecord {
 			i++;
 		}
 		i += this._rockRidgeOffset;
-		this._suEntries = constructSystemUseEntries(this.data, i, this.length, isoData);
+		this._suEntries = constructSystemUseEntries(this.data, i, BigInt(this.length), isoData);
 	}
 	/**
 	 * !!ONLY VALID ON FIRST ENTRY OF ROOT DIRECTORY!!
@@ -202,13 +202,13 @@ export abstract class DirectoryRecord {
 		const suEntries = this.getSUEntries(isoData);
 		if (suEntries.length > 0) {
 			const spEntry = suEntries[0];
-			if (spEntry instanceof SPEntry && spEntry.checkBytesPass()) {
+			if (spEntry instanceof SPEntry && spEntry.checkMagic()) {
 				// SUSP is in use.
 				for (let i = 1; i < suEntries.length; i++) {
 					const entry = suEntries[i];
-					if (entry instanceof RREntry || (entry instanceof EREntry && entry.extensionIdentifier() === rockRidgeIdentifier)) {
+					if (entry instanceof RREntry || (entry instanceof EREntry && entry.extensionIdentifier === rockRidgeIdentifier)) {
 						// Rock Ridge is in use!
-						return spEntry.bytesSkipped();
+						return spEntry.skip;
 					}
 				}
 			}
