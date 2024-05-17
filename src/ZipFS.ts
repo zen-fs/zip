@@ -1,20 +1,9 @@
-import { ErrnoError, Errno } from '@zenfs/core/error.js';
-import { FileIndex, IndexDirInode, IndexFileInode, SyncIndexFS } from '@zenfs/core/backends/Index.js';
+import { NoSyncFile, flagToMode, isWriteable, type Cred, type Stats } from '@zenfs/core';
 import { type Backend } from '@zenfs/core/backends/backend.js';
-import { NoSyncFile } from '@zenfs/core/file.js';
-import type { FileSystemMetadata } from '@zenfs/core/filesystem.js';
-import { Stats } from '@zenfs/core/stats.js';
-import { FileEntry, Header } from './zip.js';
-
-/**
- * Contains the table of contents of a Zip file.
- */
-export interface TableOfContents {
-	index: FileIndex<FileEntry>;
-	entries: FileEntry[];
-	eocd: Header;
-	data: ArrayBuffer;
-}
+import { basename, dirname } from '@zenfs/core/emulation/path.js';
+import { Errno, ErrnoError } from '@zenfs/core/error.js';
+import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
+import { FileEntry, Header, sizeof_FileEntry } from './zip.js';
 
 /**
  * Configuration options for a ZipFS file system.
@@ -23,11 +12,17 @@ export interface ZipOptions {
 	/**
 	 * The zip file as a binary buffer.
 	 */
-	zipData: ArrayBufferLike;
+	data: ArrayBufferLike;
+
 	/**
 	 * The name of the zip file (optional).
 	 */
 	name?: string;
+
+	/**
+	 * Whether to wait to initialize entries
+	 */
+	lazy?: boolean;
 }
 
 /**
@@ -59,7 +54,9 @@ export interface ZipOptions {
  *   - Stream it out to a location.
  *   This isn't that bad, so we might do this at a later date.
  */
-export class ZipFS extends SyncIndexFS<FileEntry> {
+export class ZipFS extends Readonly(Sync(FileSystem)) {
+	protected entries: Map<string, FileEntry> = new Map();
+
 	/**
 	 * Locates the end of central directory record at the end of the file.
 	 * Throws an exception if it cannot be found.
@@ -75,7 +72,7 @@ export class ZipFS extends SyncIndexFS<FileEntry> {
 	 *
 	 * There is no byte alignment on the comment
 	 */
-	protected static _getEOCD(data: ArrayBufferLike): Header {
+	protected static computeEOCD(data: ArrayBufferLike): Header {
 		const view = new DataView(data);
 		const start = 22;
 		const end = Math.min(start + 0xffff, data.byteLength - 1);
@@ -88,89 +85,43 @@ export class ZipFS extends SyncIndexFS<FileEntry> {
 		throw new ErrnoError(Errno.EINVAL, 'Invalid ZIP file: Could not locate End of Central Directory signature.');
 	}
 
-	protected static _addToIndex(cd: FileEntry, index: FileIndex<FileEntry>) {
-		// Paths must be absolute, yet zip file paths are always relative to the
-		// zip root. So we append '/' and call it a day.
-		let filename = cd.name;
-		if (filename[0] == '/') {
-			throw new ErrnoError(Errno.EPERM, 'Unexpectedly encountered an absolute path in a zip file.');
-		}
-		// For the file index, strip the trailing '/'.
-		if (filename.endsWith('/')) {
-			filename = filename.slice(0, -1);
-		}
+	public readonly eocd: Header;
 
-		index.addFast('/' + filename, cd.isDirectory ? new IndexDirInode<FileEntry>(cd) : new IndexFileInode<FileEntry>(cd));
+	public get endOfCentralDirectory(): Header {
+		return this.eocd;
 	}
 
-	protected static async _computeIndex(data: ArrayBufferLike): Promise<TableOfContents> {
-		const index: FileIndex<FileEntry> = new FileIndex<FileEntry>();
-		const eocd: Header = ZipFS._getEOCD(data);
-		if (eocd.disk != eocd.entriesDisk) {
+	public constructor(
+		public readonly name: string,
+		protected data: ArrayBufferLike
+	) {
+		super();
+
+		this.eocd = ZipFS.computeEOCD(data);
+		if (this.eocd.disk != this.eocd.entriesDisk) {
 			throw new ErrnoError(Errno.EINVAL, 'ZipFS does not support spanned zip files.');
 		}
 
-		const cdPtr = eocd.offset;
-		if (cdPtr === 0xffffffff) {
+		let ptr = this.eocd.offset;
+
+		if (ptr === 0xffffffff) {
 			throw new ErrnoError(Errno.EINVAL, 'ZipFS does not support Zip64.');
 		}
-		const cdEnd = cdPtr + eocd.size;
-		return ZipFS._computeIndexResponsive(data, index, cdPtr, cdEnd, [], eocd);
-	}
+		const cdEnd = ptr + this.eocd.size;
 
-	protected static async _computeIndexResponsive(
-		data: ArrayBufferLike,
-		index: FileIndex<FileEntry>,
-		cdPtr: number,
-		cdEnd: number,
-		entries: FileEntry[],
-		eocd: Header
-	): Promise<TableOfContents> {
-		if (cdPtr >= cdEnd) {
-			return {
-				index,
-				entries,
-				eocd,
-				data,
-			};
+		while (ptr < cdEnd) {
+			const cd = new FileEntry(this.data, this.data.slice(ptr, sizeof_FileEntry));
+			/* 	Paths must be absolute,
+			yet zip file paths are always relative to the zip root.
+			So we prepend '/' and call it a day. */
+			if (cd.name.startsWith('/')) {
+				throw new ErrnoError(Errno.EPERM, 'Unexpectedly encountered an absolute path in a zip file.');
+			}
+			// Strip the trailing '/' if it exists
+			const name = cd.name.endsWith('/') ? cd.name.slice(0, -1) : cd.name;
+			this.entries.set('/' + name, cd);
+			ptr += cd.size;
 		}
-
-		while (cdPtr < cdEnd) {
-			const cd: FileEntry = new FileEntry(data, data.slice(cdPtr));
-			ZipFS._addToIndex(cd, index);
-			cdPtr += cd.size;
-			entries.push(cd);
-		}
-
-		return ZipFS._computeIndexResponsive(data, index, cdPtr, cdEnd, entries, eocd);
-	}
-
-	public _index: FileIndex<FileEntry> = new FileIndex<FileEntry>();
-	private _directoryEntries: FileEntry[] = [];
-	private _eocd?: Header = null;
-	private data: ArrayBufferLike;
-	public readonly name: string;
-
-	protected async _initialize(zipData: ArrayBufferLike): Promise<void> {
-		const zipTOC = await ZipFS._computeIndex(zipData);
-		this._index = zipTOC.index;
-		this._directoryEntries = zipTOC.entries;
-		this._eocd = zipTOC.eocd;
-		this.data = zipTOC.data;
-		return;
-	}
-
-	protected _ready: Promise<void>;
-
-	public async ready(): Promise<this> {
-		await this._ready;
-		return;
-	}
-
-	public constructor({ zipData, name = '' }: ZipOptions) {
-		super({});
-		this.name = name;
-		this._ready = this._initialize(zipData);
 	}
 
 	public metadata(): FileSystemMetadata {
@@ -182,46 +133,65 @@ export class ZipFS extends SyncIndexFS<FileEntry> {
 		};
 	}
 
-	/**
-	 * Get the CentralDirectory object for the given path.
-	 */
-	public getCentralDirectoryEntry(path: string): FileEntry {
-		const inode = this._index.get(path);
-		if (!inode) {
-			throw ErrnoError.With('ENOENT', path, 'getCentralDirectoryEntry');
-		}
-		if (inode.isDirectory()) {
-			return inode.data;
-		}
-		if (inode.isFile()) {
-			return inode.data!;
-		}
-		// Should never occur.
-		throw ErrnoError.With('EPERM', 'Invalid inode: ' + inode, 'getCentralDirectoryEntry');
-	}
-
-	public getCentralDirectoryEntryAt(index: number): FileEntry {
-		const dirEntry = this._directoryEntries[index];
-		if (!dirEntry) {
-			throw new RangeError('Invalid directory index: ' + index);
-		}
-		return dirEntry;
-	}
-
 	public get numberOfCentralDirectoryEntries(): number {
-		return this._directoryEntries.length;
+		return this.entries.size;
 	}
 
-	public get endOfCentralDirectory(): Header | null {
-		return this._eocd;
+	public statSync(path: string): Stats {
+		const entry = this.entries.get(path);
+
+		if (!entry) {
+			throw ErrnoError.With('ENOENT', path, 'stat');
+		}
+
+		return entry.stats;
 	}
 
-	protected statFileInodeSync(inode: IndexFileInode<FileEntry>): Stats {
-		return inode.data.stats;
+	public openFileSync(path: string, flag: string, cred: Cred): NoSyncFile<this> {
+		if (isWriteable(flag)) {
+			// You can't write to files on this file system.
+			throw new ErrnoError(Errno.EPERM, path);
+		}
+
+		// Check if the path exists, and is a file.
+		const entry = this.entries.get(path);
+
+		if (!entry) {
+			throw ErrnoError.With('ENOENT', path, 'openFile');
+		}
+
+		const stats = entry.stats;
+
+		if (!stats.hasAccess(flagToMode(flag), cred)) {
+			throw ErrnoError.With('EACCES', path, 'openFile');
+		}
+
+		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : entry.data);
 	}
 
-	protected openFileInodeSync(inode: IndexFileInode<FileEntry>, path: string, flag: string): NoSyncFile<this> {
-		return new NoSyncFile(this, path, flag, this.statFileInodeSync(inode), inode.data.data);
+	protected dirEntries(dir: string): string[] {
+		const entries = [];
+		for (const entry of this.entries.keys()) {
+			if (dirname(entry) == dir) {
+				entries.push(basename(entry));
+			}
+		}
+		return entries;
+	}
+
+	public readdirSync(path: string): string[] {
+		const entry = this.entries.get(path);
+		if (!entry) {
+			throw ErrnoError.With('ENOENT', path, 'readdir');
+		}
+
+		const stats = entry.stats;
+
+		if (!stats.isDirectory()) {
+			throw ErrnoError.With('ENOTDIR', path, 'readdir');
+		}
+
+		return this.dirEntries(path);
 	}
 }
 
@@ -229,7 +199,7 @@ export const Zip = {
 	name: 'Zip',
 
 	options: {
-		zipData: {
+		data: {
 			type: 'object',
 			required: true,
 			description: 'The zip file as an ArrayBuffer object.',
@@ -251,6 +221,6 @@ export const Zip = {
 	},
 
 	create(options: ZipOptions) {
-		return new ZipFS(options);
+		return new ZipFS(options.name, options.data);
 	},
 } satisfies Backend<ZipFS, ZipOptions>;

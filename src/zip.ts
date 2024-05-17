@@ -163,6 +163,12 @@ class ExtraDataRecord {
 }
 
 /**
+ * @hidden
+ * Inlined for performance
+ */
+export const sizeof_FileEntry = 46;
+
+/**
  * Refered to as a "central directory" record in the spec.
  * This is a file metadata entry inside the "central directory".
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.12
@@ -180,9 +186,8 @@ class FileEntry {
 			throw new ErrnoError(Errno.EINVAL, 'Invalid Zip file: Central directory record has invalid signature: ' + this.signature);
 		}
 
-		const size = sizeof(FileEntry);
-		this.name = safeDecode(this._data, this.useUTF8, size, this.nameLength).replace(/\\/g, '/');
-		this.comment = safeDecode(this._data, this.useUTF8, size + this.nameLength + this.extraLength, this.commentLength);
+		this.name = safeDecode(this._data, this.useUTF8, sizeof_FileEntry, this.nameLength).replace(/\\/g, '/');
+		this.comment = safeDecode(this._data, this.useUTF8, sizeof_FileEntry + this.nameLength + this.extraLength, this.commentLength);
 	}
 
 	@t.uint32 public signature: number;
@@ -380,7 +385,7 @@ class FileEntry {
 
 	public get stats(): Stats {
 		return new Stats({
-			mode: 0o555 | FileType.FILE,
+			mode: 0o555 | (this.isDirectory ? FileType.DIRECTORY : FileType.FILE),
 			size: this.uncompressedSize,
 			mtimeMs: this.lastModified.getTime(),
 		});
