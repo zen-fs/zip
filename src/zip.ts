@@ -417,6 +417,7 @@ class DigitalSignature {
 
 /**
  * Overall ZIP file header.
+ * Also call "end of central directory record"
  * Internally, ZIP files have only a single directory: the "central directory".
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.16
  */

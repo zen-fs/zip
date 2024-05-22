@@ -1,4 +1,4 @@
-import { NoSyncFile, flagToMode, isWriteable, type Cred, type Stats } from '@zenfs/core';
+import { FileType, NoSyncFile, Stats, flagToMode, isWriteable, type Cred } from '@zenfs/core';
 import { type Backend } from '@zenfs/core/backends/backend.js';
 import { basename, dirname } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
@@ -56,6 +56,8 @@ export interface ZipOptions {
  */
 export class ZipFS extends Readonly(Sync(FileSystem)) {
 	protected entries: Map<string, FileEntry> = new Map();
+
+	protected _time = Date.now();
 
 	/**
 	 * Locates the end of central directory record at the end of the file.
@@ -138,6 +140,18 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 	}
 
 	public statSync(path: string): Stats {
+		// The EOCD/Header does not track '/', so it does not exist in `entries`
+		if (path == '/') {
+			return new Stats({
+				mode: 0o555 | FileType.DIRECTORY,
+				size: [...this.entries.values()].reduce((size, entry) => size + entry.uncompressedSize, 0),
+				mtimeMs: this._time,
+				ctimeMs: this._time,
+				atimeMs: Date.now(),
+				birthtimeMs: this._time,
+			});
+		}
+
 		const entry = this.entries.get(path);
 
 		if (!entry) {
