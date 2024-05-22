@@ -20,7 +20,9 @@ npm install @zenfs/iso
 ## Usage
 
 > [!NOTE]
-> The examples are written in ESM. If you are using CJS, you can `require` the package. If running in a browser you can add a script tag to your HTML pointing to the `browser.min.js` and use ZenFS Iso via the global `ZenFS_ISO` object.
+> The examples are written in ESM.  
+> For CJS, you can `require` the package.  
+> For a browser environment without support for `type=module` in `script` tags, you can add a `script` tag to your HTML pointing to the `browser.min.js` and use the global `ZenFS_ISO` object.
 
 ```js
 import { configure, fs } from '@zenfs/core';
@@ -29,7 +31,9 @@ import { Iso } from '@zenfs/iso';
 const res = await fetch('http://example.com/image.iso');
 
 await configure({
-	'/mnt/iso': { backend: Iso, isoData: await res.arrayBuffer() },
+	mounts: {
+		'/mnt/iso': { backend: Iso, data: await res.arrayBuffer() },
+	},
 });
 
 const contents = fs.readFileSync('/mnt/iso/in-image.txt', 'utf-8');
