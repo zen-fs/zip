@@ -28,7 +28,7 @@ const res = await fetch('http://example.com/archive.zip');
 await configure({
 	mounts: {
 		'/mnt/zip': { backend: Zip, data: await res.arrayBuffer() },
-	}
+	},
 });
 
 const contents = fs.readFileSync('/mnt/zip/in-archive.txt', 'utf-8');
