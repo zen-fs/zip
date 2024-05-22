@@ -3,7 +3,7 @@ import { configure, fs } from '@zenfs/core';
 import { readFileSync } from 'fs';
 import { Zip } from '../dist/ZipFS.js';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path/posix';
+import { dirname } from 'path';
 
 describe('Basic zip file', () => {
 	test('Configure', async () => {
