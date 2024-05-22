@@ -3,6 +3,7 @@
 	"testEnvironment": "node",
 	"extensionsToTreatAsEsm": [".ts"],
 	"testMatch": ["./**/*.test.ts"],
+	"transformIgnorePatterns": ["!node_modules/", "!src"],
 	"moduleNameMapper": {
 		"^(\\.{1,2}/.*)\\.js$": "$1"
 	},
@@ -10,7 +11,7 @@
 		"^.+\\.ts$": [
 			"ts-jest",
 			{
-				"tsconfig": "test/tsconfig.json",
+				"tsconfig": "tests/tsconfig.json",
 				"useESM": true
 			}
 		]

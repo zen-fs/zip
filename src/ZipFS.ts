@@ -1,6 +1,6 @@
 import { FileType, NoSyncFile, Stats, flagToMode, isWriteable, type Cred } from '@zenfs/core';
 import { type Backend } from '@zenfs/core/backends/backend.js';
-import { basename, dirname } from '@zenfs/core/emulation/path.js';
+import { parse } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
 import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { FileEntry, Header } from './zip.js';
@@ -167,39 +167,29 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			throw new ErrnoError(Errno.EPERM, path);
 		}
 
-		// Check if the path exists, and is a file.
-		const entry = this.entries.get(path);
-
-		if (!entry) {
-			throw ErrnoError.With('ENOENT', path, 'openFile');
-		}
-
-		const stats = entry.stats;
+		const stats = this.statSync(path);
 
 		if (!stats.hasAccess(flagToMode(flag), cred)) {
 			throw ErrnoError.With('EACCES', path, 'openFile');
 		}
 
-		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : entry.data);
+		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : this.entries.get(path).data);
 	}
 
-	protected dirEntries(dir: string): string[] {
+	protected dirEntries(path: string): string[] {
 		const entries = [];
+
 		for (const entry of this.entries.keys()) {
-			if (dirname(entry) == dir) {
-				entries.push(basename(entry));
+			const { dir, base } = parse(entry);
+			if (path == dir) {
+				entries.push(base);
 			}
 		}
 		return entries;
 	}
 
 	public readdirSync(path: string): string[] {
-		const entry = this.entries.get(path);
-		if (!entry) {
-			throw ErrnoError.With('ENOENT', path, 'readdir');
-		}
-
-		const stats = entry.stats;
+		const stats = this.statSync(path);
 
 		if (!stats.isDirectory()) {
 			throw ErrnoError.With('ENOTDIR', path, 'readdir');
@@ -234,7 +224,7 @@ export const Zip = {
 		return true;
 	},
 
-	create(options: ZipOptions) {
+	create(options: ZipOptions): ZipFS {
 		return new ZipFS(options.name, options.data);
 	},
 } satisfies Backend<ZipFS, ZipOptions>;
