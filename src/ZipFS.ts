@@ -3,7 +3,7 @@ import { type Backend } from '@zenfs/core/backends/backend.js';
 import { basename, dirname } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
 import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
-import { FileEntry, Header, sizeof_FileEntry } from './zip.js';
+import { FileEntry, Header } from './zip.js';
 
 /**
  * Configuration options for a ZipFS file system.
@@ -110,7 +110,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 		const cdEnd = ptr + this.eocd.size;
 
 		while (ptr < cdEnd) {
-			const cd = new FileEntry(this.data, this.data.slice(ptr, sizeof_FileEntry));
+			const cd = new FileEntry(this.data, this.data.slice(ptr));
 			/* 	Paths must be absolute,
 			yet zip file paths are always relative to the zip root.
 			So we prepend '/' and call it a day. */
