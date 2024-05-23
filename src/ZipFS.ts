@@ -55,7 +55,8 @@ export interface ZipOptions {
  *   This isn't that bad, so we might do this at a later date.
  */
 export class ZipFS extends Readonly(Sync(FileSystem)) {
-	protected entries: Map<string, FileEntry> = new Map();
+	protected files: Map<string, FileEntry> = new Map();
+	protected directories: Map<string, string[]> = new Map();
 
 	protected _time = Date.now();
 
@@ -121,8 +122,19 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			}
 			// Strip the trailing '/' if it exists
 			const name = cd.name.endsWith('/') ? cd.name.slice(0, -1) : cd.name;
-			this.entries.set('/' + name, cd);
+			this.files.set('/' + name, cd);
 			ptr += cd.size;
+		}
+
+		// Parse directories
+		for (const entry of this.files.keys()) {
+			const { dir, base } = parse(entry);
+
+			if (!this.directories.has(dir)) {
+				this.directories.set(dir, []);
+			}
+
+			this.directories.get(dir).push(base);
 		}
 	}
 
@@ -136,15 +148,15 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 	}
 
 	public get numberOfCentralDirectoryEntries(): number {
-		return this.entries.size;
+		return this.files.size;
 	}
 
 	public statSync(path: string): Stats {
-		// The EOCD/Header does not track '/', so it does not exist in `entries`
-		if (path == '/') {
+		// The EOCD/Header does not track directories, so it does not exist in `entries`
+		if (this.directories.has(path)) {
 			return new Stats({
 				mode: 0o555 | FileType.DIRECTORY,
-				size: [...this.entries.values()].reduce((size, entry) => size + entry.uncompressedSize, 0),
+				size: 4096,
 				mtimeMs: this._time,
 				ctimeMs: this._time,
 				atimeMs: Date.now(),
@@ -152,13 +164,11 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			});
 		}
 
-		const entry = this.entries.get(path);
-
-		if (!entry) {
-			throw ErrnoError.With('ENOENT', path, 'stat');
+		if (this.files.has(path)) {
+			return this.files.get(path).stats;
 		}
 
-		return entry.stats;
+		throw ErrnoError.With('ENOENT', path, 'stat');
 	}
 
 	public openFileSync(path: string, flag: string, cred: Cred): NoSyncFile<this> {
@@ -173,19 +183,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			throw ErrnoError.With('EACCES', path, 'openFile');
 		}
 
-		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : this.entries.get(path).data);
-	}
-
-	protected dirEntries(path: string): string[] {
-		const entries = [];
-
-		for (const entry of this.entries.keys()) {
-			const { dir, base } = parse(entry);
-			if (path == dir) {
-				entries.push(base);
-			}
-		}
-		return entries;
+		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : this.files.get(path).data);
 	}
 
 	public readdirSync(path: string): string[] {
@@ -195,7 +193,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			throw ErrnoError.With('ENOTDIR', path, 'readdir');
 		}
 
-		return this.dirEntries(path);
+		return this.directories.get(path);
 	}
 }
 
