@@ -27,6 +27,12 @@
 		".": "./dist/index.js",
 		"./*": "./dist/*"
 	},
+	"files": [
+		"dist",
+		"src",
+		"license.md",
+		"tsconfig.json"
+	],
 	"scripts": {
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
