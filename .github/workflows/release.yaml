@@ -6,30 +6,11 @@ on:
 
 jobs:
     ci:
-        uses: ./.github/workflows/ci.yaml
+        name: CI
+        uses: zen-fs/core/.github/workflows/ci.yaml@main
         permissions:
-            contents: write
+            contents: read
             id-token: write
-            pages: write
     release:
-        runs-on: ubuntu-latest
-        needs: ci
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v3
-
-            - name: Setup npm authenication
-              uses: actions/setup-node@v3
-              with:
-                  registry-url: https://registry.npmjs.org/
-
-            - name: Install dependencies
-              run: npm install
-
-            - name: Build
-              run: npm run build
-
-            - name: Publish
-              run: npm publish --access=public
-              env:
-                  NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+        name: Release
+        uses: zen-fs/core/.github/workflows/release.yaml@main

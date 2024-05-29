@@ -23,6 +23,12 @@
 	"engines": {
 		"node": ">= 18"
 	},
+	"files": [
+		"dist",
+		"src",
+		"license.md",
+		"tsconfig.json"
+	],
 	"exports": {
 		".": "./dist/index.js",
 		"./*": "./dist/*"
@@ -33,6 +39,7 @@
 		"lint": "eslint src",
 		"build": "npx build --package=@zenfs/core --globalName ZenFS_ISO --entry src/index.ts",
 		"build:docs": "typedoc --out docs --name 'ZenFS ISO' src/index.ts",
+		"test": "echo No tests yet",
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
