@@ -1,5 +1,6 @@
-import { ErrnoError, Errno } from '@zenfs/core/error.js';
-import { FileType, Stats } from '@zenfs/core/stats.js';
+import { S_IFDIR, S_IFREG } from '@zenfs/core/emulation/constants.js';
+import { Errno, ErrnoError } from '@zenfs/core/error.js';
+import { Stats } from '@zenfs/core/stats.js';
 import { deserialize, sizeof, struct, types as t } from 'utilium';
 import { CompressionMethod, decompressionMethods } from './compression.js';
 import { msdosDate, safeDecode } from './utils.js';
@@ -385,7 +386,7 @@ class FileEntry {
 
 	public get stats(): Stats {
 		return new Stats({
-			mode: 0o555 | (this.isDirectory ? FileType.DIRECTORY : FileType.FILE),
+			mode: 0o555 | (this.isDirectory ? S_IFDIR : S_IFREG),
 			size: this.uncompressedSize,
 			mtimeMs: this.lastModified.getTime(),
 		});

@@ -1,5 +1,6 @@
-import { FileType, NoSyncFile, Stats, flagToMode, isWriteable, type Cred } from '@zenfs/core';
+import { NoSyncFile, Stats, flagToMode, isWriteable, type Cred } from '@zenfs/core';
 import { type Backend } from '@zenfs/core/backends/backend.js';
+import { S_IFDIR } from '@zenfs/core/emulation/constants.js';
 import { parse } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
 import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
@@ -155,7 +156,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 		// The EOCD/Header does not track directories, so it does not exist in `entries`
 		if (this.directories.has(path)) {
 			return new Stats({
-				mode: 0o555 | FileType.DIRECTORY,
+				mode: 0o555 | S_IFDIR,
 				size: 4096,
 				mtimeMs: this._time,
 				ctimeMs: this._time,
