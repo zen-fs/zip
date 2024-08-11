@@ -1,6 +1,6 @@
 {
 	"name": "@zenfs/zip",
-	"version": "0.4.6",
+	"version": "0.4.7",
 	"description": "Zip backend for ZenFS",
 	"main": "dist/index.js",
 	"types": "src/index.ts",
