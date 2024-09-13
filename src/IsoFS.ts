@@ -1,10 +1,11 @@
-import { ErrnoError, Errno } from '@zenfs/core/error.js';
 import type { Backend } from '@zenfs/core/backends/backend.js';
 import type { Cred } from '@zenfs/core/cred.js';
+import { S_IFDIR, S_IFREG } from '@zenfs/core/emulation/constants.js';
 import { resolve } from '@zenfs/core/emulation/path.js';
+import { Errno, ErrnoError } from '@zenfs/core/error.js';
 import { NoSyncFile, isWriteable } from '@zenfs/core/file.js';
 import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
-import { FileType, Stats } from '@zenfs/core/stats.js';
+import { Stats } from '@zenfs/core/stats.js';
 import { DirectoryRecord } from './DirectoryRecord.js';
 import { PrimaryOrSupplementaryVolumeDescriptor, PrimaryVolumeDescriptor, SupplementaryVolumeDescriptor, VolumeDescriptor, VolumeDescriptorType } from './VolumeDescriptor.js';
 import { PXEntry, TFEntry, TFFlags } from './entries.js';
@@ -190,7 +191,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		// Mask out writeable flags. This is a RO file system.
 		mode &= 0o555;
 		return new Stats({
-			mode: mode | (record.isDirectory(this._data) ? FileType.DIRECTORY : FileType.FILE),
+			mode: mode | (record.isDirectory(this._data) ? S_IFDIR : S_IFREG),
 			size: record.dataLength,
 			atimeMs,
 			mtimeMs,
