@@ -1,5 +1,4 @@
 import type { Backend } from '@zenfs/core/backends/backend.js';
-import type { Cred } from '@zenfs/core/cred.js';
 import { S_IFDIR, S_IFREG } from '@zenfs/core/emulation/constants.js';
 import { resolve } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
@@ -97,7 +96,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		return this._getStats(path, record)!;
 	}
 
-	public openFileSync(path: string, flag: string, cred: Cred): NoSyncFile<this> {
+	public openFileSync(path: string, flag: string): NoSyncFile<this> {
 		if (isWriteable(flag)) {
 			// Cannot write to RO file systems.
 			throw new ErrnoError(Errno.EPERM, path);
@@ -109,7 +108,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		}
 
 		if (record.isSymlink(this._data)) {
-			return this.openFileSync(resolve(path, record.getSymlinkPath(this._data)), flag, cred);
+			return this.openFileSync(resolve(path, record.getSymlinkPath(this._data)), flag);
 		}
 		const data = !record.isDirectory(this._data) ? record.getFile(this._data) : undefined;
 		const stats = this._getStats(path, record)!;
