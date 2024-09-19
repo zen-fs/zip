@@ -1,4 +1,4 @@
-import { NoSyncFile, Stats, flagToMode, isWriteable, type Cred } from '@zenfs/core';
+import { NoSyncFile, Stats, isWriteable } from '@zenfs/core';
 import { type Backend } from '@zenfs/core/backends/backend.js';
 import { S_IFDIR } from '@zenfs/core/emulation/constants.js';
 import { parse } from '@zenfs/core/emulation/path.js';
@@ -172,17 +172,13 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 		throw ErrnoError.With('ENOENT', path, 'stat');
 	}
 
-	public openFileSync(path: string, flag: string, cred: Cred): NoSyncFile<this> {
+	public openFileSync(path: string, flag: string): NoSyncFile<this> {
 		if (isWriteable(flag)) {
 			// You can't write to files on this file system.
 			throw new ErrnoError(Errno.EPERM, path);
 		}
 
 		const stats = this.statSync(path);
-
-		if (!stats.hasAccess(flagToMode(flag), cred)) {
-			throw ErrnoError.With('EACCES', path, 'openFile');
-		}
 
 		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : this.files.get(path).data);
 	}
