@@ -5,7 +5,8 @@ import { parse } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
 import { FileSystem, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { FileEntry, Header } from './zip.js';
-import { Sync, Readonly } from '@zenfs/core/mixins/index.js';
+import { Sync } from '@zenfs/core/mixins/sync.js';
+import { Readonly } from '@zenfs/core/mixins/readonly.js';
 
 /**
  * Configuration options for a ZipFS file system.
