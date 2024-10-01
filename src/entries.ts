@@ -1,4 +1,4 @@
-import { deserialize, struct, types as t } from 'utilium';
+import { deserialize, struct, types as t, type Tuple } from 'utilium';
 import { SLComponentRecord } from './SLComponentRecord.js';
 import { TGetString, getASCIIString, getDate, getShortFormDate } from './utils.js';
 
@@ -32,19 +32,19 @@ export const enum EntrySignature {
 export
 @struct()
 class SystemUseEntry {
-	public constructor(protected data: ArrayBuffer) {
+	public constructor(protected data: Uint8Array) {
 		deserialize(this, data);
 	}
 
-	@t.uint16 public signature: EntrySignature;
+	@t.uint16 public signature!: EntrySignature;
 
 	public get signatureString(): string {
 		return getASCIIString(this.data, 0, 2);
 	}
 
-	@t.uint8 public length: number;
+	@t.uint8 public length!: number;
 
-	@t.uint8 public suVersion: number;
+	@t.uint8 public suVersion!: number;
 }
 
 /**
@@ -56,23 +56,20 @@ export class CEEntry extends SystemUseEntry {
 	/**
 	 * Logical block address of the continuation area.
 	 */
-	@t.uint64 public extent: bigint;
+	@t.uint64 public extent!: bigint;
 
 	/**
 	 * Offset into the logical block.
 	 */
-	@t.uint64 public offset: bigint;
+	@t.uint64 public offset!: bigint;
 
 	/**
 	 * Length of the continuation area.
 	 */
-	@t.uint64 public size: bigint;
+	@t.uint64 public size!: bigint;
 
-	public entries(data: ArrayBuffer): SystemUseEntry[] {
-		if (!this._entries) {
-			const start = this.extent * 2048n + this.offset;
-			this._entries = constructSystemUseEntries(data, start, this.size, data);
-		}
+	public entries(data: Uint8Array): SystemUseEntry[] {
+		this._entries ||= constructSystemUseEntries(data, Number(this.extent * 2048n + this.offset), this.size, data);
 		return this._entries;
 	}
 }
@@ -86,13 +83,13 @@ export class PDEntry extends SystemUseEntry {}
  * Identifies that SUSP is in-use.
  */
 export class SPEntry extends SystemUseEntry {
-	@t.uint8(2) public magic: number;
+	@t.uint8(2) public magic!: Tuple<number, 2>;
 
 	public checkMagic(): boolean {
 		return this.magic[0] == 190 && this.magic[1] == 239;
 	}
 
-	@t.uint8 public skip: number;
+	@t.uint8 public skip!: number;
 }
 
 /**
@@ -104,27 +101,29 @@ export class STEntry extends SystemUseEntry {}
  * Specifies system-specific extensions to SUSP.
  */
 export class EREntry extends SystemUseEntry {
-	@t.uint8 public idLength: number;
+	@t.uint8 public idLength!: number;
 
-	@t.uint8 public descriptorLength: number;
+	@t.uint8 public descriptorLength!: number;
 
-	@t.uint8 public sourceLength: number;
+	@t.uint8 public sourceLength!: number;
 
-	@t.uint8 public extensionVersion: number;
+	@t.uint8 public extensionVersion!: number;
 
 	public get extensionIdentifier(): string {
 		return getASCIIString(this.data, 8, this.idLength);
 	}
+
 	public get extensionDescriptor(): string {
 		return getASCIIString(this.data, 8 + this.idLength, this.descriptorLength);
 	}
+
 	public get extensionSource(): string {
 		return getASCIIString(this.data, 8 + this.idLength + this.descriptorLength, this.sourceLength);
 	}
 }
 
 export class ESEntry extends SystemUseEntry {
-	@t.uint8 public extensionSequence: number;
+	@t.uint8 public extensionSequence!: number;
 }
 
 /**
@@ -137,24 +136,24 @@ export class RREntry extends SystemUseEntry {}
  * RockRidge: Records POSIX file attributes.
  */
 export class PXEntry extends SystemUseEntry {
-	@t.uint64 public mode: bigint;
+	@t.uint64 public mode!: bigint;
 
-	@t.uint64 public nlinks: bigint;
+	@t.uint64 public nlinks!: bigint;
 
-	@t.uint64 public uid: bigint;
+	@t.uint64 public uid!: bigint;
 
-	@t.uint64 public gid: bigint;
+	@t.uint64 public gid!: bigint;
 
-	@t.uint64 public inode: bigint;
+	@t.uint64 public inode!: bigint;
 }
 
 /**
  * RockRidge: Records POSIX device number.
  */
 export class PNEntry extends SystemUseEntry {
-	@t.uint64 public dev_high: bigint;
+	@t.uint64 public dev_high!: bigint;
 
-	@t.uint64 public dev_low: bigint;
+	@t.uint64 public dev_low!: bigint;
 }
 
 /**
@@ -162,11 +161,12 @@ export class PNEntry extends SystemUseEntry {
  */
 
 export class SLEntry extends SystemUseEntry {
-	@t.uint8 public flags: number;
+	@t.uint8 public flags!: number;
 
 	public get continueFlag(): number {
 		return this.flags & 1;
 	}
+
 	public get componentRecords(): SLComponentRecord[] {
 		const records = [];
 		let i = 5;
@@ -179,8 +179,8 @@ export class SLEntry extends SystemUseEntry {
 	}
 }
 
-export function constructSystemUseEntry(_data: ArrayBuffer, i: bigint): SystemUseEntry {
-	const data = _data.slice(Number(i));
+export function constructSystemUseEntry(_data: Uint8Array, i: number): SystemUseEntry {
+	const data = _data.slice(i);
 	const sue = new SystemUseEntry(data);
 	switch (sue.signature) {
 		case EntrySignature.CE:
@@ -220,12 +220,12 @@ export function constructSystemUseEntry(_data: ArrayBuffer, i: bigint): SystemUs
 	}
 }
 
-export function constructSystemUseEntries(data: ArrayBuffer, i: bigint, len: bigint, isoData: ArrayBuffer): SystemUseEntry[] {
+export function constructSystemUseEntries(data: Uint8Array, i: number, len: bigint, isoData: Uint8Array): SystemUseEntry[] {
 	// If the remaining allocated space following the last recorded System Use Entry in a System
 	// Use field or Continuation Area is less than four bytes long, it cannot contain a System
 	// Use Entry and shall be ignored
 	len -= 4n;
-	let entries = [];
+	const entries: SystemUseEntry[] = [];
 	while (i < len) {
 		const entry = constructSystemUseEntry(data, i);
 		const length = entry.length;
@@ -233,13 +233,13 @@ export function constructSystemUseEntries(data: ArrayBuffer, i: bigint, len: big
 			// Invalid SU section; prevent infinite loop.
 			return entries;
 		}
-		i += BigInt(length);
+		i += length;
 		if (entry instanceof STEntry) {
 			// ST indicates the end of entries.
 			break;
 		}
 		if (entry instanceof CEEntry) {
-			entries = entries.concat(entry.entries(isoData));
+			entries.push(...entry.entries(isoData));
 		} else {
 			entries.push(entry);
 		}
@@ -258,11 +258,7 @@ export const enum NMFlags {
  */
 
 export class NMEntry extends SystemUseEntry {
-	constructor(data: ArrayBuffer) {
-		super(data);
-	}
-
-	@t.uint8 public flags: NMFlags;
+	@t.uint8 public flags!: NMFlags;
 
 	public name(getString: TGetString): string {
 		return getString(this.data, 5, this.length - 5);
@@ -274,7 +270,7 @@ export class NMEntry extends SystemUseEntry {
  */
 
 export class CLEntry extends SystemUseEntry {
-	@t.uint32 public childDirectoryLba: number;
+	@t.uint32 public childDirectoryLba!: number;
 }
 
 /**
@@ -282,7 +278,7 @@ export class CLEntry extends SystemUseEntry {
  */
 
 export class PLEntry extends SystemUseEntry {
-	@t.uint32 public parentDirectoryLba: number;
+	@t.uint32 public parentDirectoryLba!: number;
 }
 
 /**
@@ -306,42 +302,33 @@ export const enum TFFlags {
  */
 
 export class TFEntry extends SystemUseEntry {
-	@t.uint8 public flags: number;
+	@t.uint8 public flags!: number;
 
 	public get creation(): Date | undefined {
-		if (this.flags & TFFlags.CREATION) {
-			if (this._longFormDates()) {
-				return getDate(this.data, 5);
-			} else {
-				return getShortFormDate(this.data, 5);
-			}
-		} else {
-			return null;
+		if (!(this.flags & TFFlags.CREATION)) {
+			return;
 		}
+
+		return this._longFormDates() ? getDate(this.data, 5) : getShortFormDate(this.data, 5);
 	}
+
 	public get modify(): Date | undefined {
 		if (!(this.flags & TFFlags.MODIFY)) {
 			return;
 		}
 		const previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
-		if (this._longFormDates()) {
-			return getDate(this.data, 5 + previousDates * 17);
-		} else {
-			return getShortFormDate(this.data, 5 + previousDates * 7);
-		}
+		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
 	}
+
 	public get access(): Date | undefined {
 		if (!(this.flags & TFFlags.ACCESS)) {
 			return;
 		}
 		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
 		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
-		if (this._longFormDates()) {
-			return getDate(this.data, 5 + previousDates * 17);
-		} else {
-			return getShortFormDate(this.data, 5 + previousDates * 7);
-		}
+		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
 	}
+
 	public get backup(): Date | undefined {
 		if (!(this.flags & TFFlags.BACKUP)) {
 			return;
@@ -349,12 +336,9 @@ export class TFEntry extends SystemUseEntry {
 		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
 		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
 		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
-		if (this._longFormDates()) {
-			return getDate(this.data, 5 + previousDates * 17);
-		} else {
-			return getShortFormDate(this.data, 5 + previousDates * 7);
-		}
+		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
 	}
+
 	public get expiration(): Date | undefined {
 		if (!(this.flags & TFFlags.EXPIRATION)) {
 			return;
@@ -363,12 +347,9 @@ export class TFEntry extends SystemUseEntry {
 		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
 		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
 		previousDates += this.flags & TFFlags.BACKUP ? 1 : 0;
-		if (this._longFormDates()) {
-			return getDate(this.data, 5 + previousDates * 17);
-		} else {
-			return getShortFormDate(this.data, 5 + previousDates * 7);
-		}
+		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
 	}
+
 	public get effective(): Date | undefined {
 		if (!(this.flags & TFFlags.EFFECTIVE)) {
 			return;
@@ -378,12 +359,9 @@ export class TFEntry extends SystemUseEntry {
 		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
 		previousDates += this.flags & TFFlags.BACKUP ? 1 : 0;
 		previousDates += this.flags & TFFlags.EXPIRATION ? 1 : 0;
-		if (this._longFormDates()) {
-			return getDate(this.data, 5 + previousDates * 17);
-		} else {
-			return getShortFormDate(this.data, 5 + previousDates * 7);
-		}
+		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
 	}
+
 	private _longFormDates(): boolean {
 		return !!(this.flags && TFFlags.LONG_FORM);
 	}
@@ -394,9 +372,9 @@ export class TFEntry extends SystemUseEntry {
  */
 
 export class SFEntry extends SystemUseEntry {
-	@t.uint64 public virtualSizeHigh: bigint;
+	@t.uint64 public virtualSizeHigh!: bigint;
 
-	@t.uint64 public virtualSizeLow: bigint;
+	@t.uint64 public virtualSizeLow!: bigint;
 
-	@t.uint8 public tableDepth: number;
+	@t.uint8 public tableDepth!: number;
 }

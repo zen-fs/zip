@@ -3,11 +3,12 @@ import { S_IFDIR, S_IFREG } from '@zenfs/core/emulation/constants.js';
 import { resolve } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
 import { NoSyncFile, isWriteable } from '@zenfs/core/file.js';
-import { FileSystem, Readonly, Sync, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
+import { FileSystem, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { Stats } from '@zenfs/core/stats.js';
 import { DirectoryRecord } from './DirectoryRecord.js';
 import { PrimaryOrSupplementaryVolumeDescriptor, PrimaryVolumeDescriptor, SupplementaryVolumeDescriptor, VolumeDescriptor, VolumeDescriptorType } from './VolumeDescriptor.js';
 import { PXEntry, TFEntry, TFFlags } from './entries.js';
+import { Sync, Readonly } from '@zenfs/core/mixins/index.js';
 
 /**
  * Options for IsoFS file system instances.
@@ -31,8 +32,8 @@ export interface IsoOptions {
  * * Microsoft Joliet and Rock Ridge extensions to the ISO9660 standard
  */
 export class IsoFS extends Readonly(Sync(FileSystem)) {
-	private _data: ArrayBuffer;
-	private _pvd: PrimaryOrSupplementaryVolumeDescriptor;
+	protected data: Uint8Array;
+	private _pvd?: PrimaryOrSupplementaryVolumeDescriptor;
 	private _root: DirectoryRecord;
 	private _name: string;
 
@@ -43,15 +44,15 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 	 * @param data The ISO file in a buffer.
 	 * @param name The name of the ISO (optional; used for debug messages / identification via getName()).
 	 */
-	constructor({ data, name = '' }: IsoOptions) {
+	public constructor({ data, name = '' }: IsoOptions) {
 		super();
-		this._data = data.buffer;
+		this.data = data;
 		// Skip first 16 sectors.
 		let vdTerminatorFound = false;
 		let i = 16 * 2048;
 		const candidateVDs = new Array<PrimaryOrSupplementaryVolumeDescriptor>();
 		while (!vdTerminatorFound) {
-			const slice = this._data.slice(i);
+			const slice = this.data.slice(i);
 			const vd = new VolumeDescriptor(slice);
 			switch (vd.type) {
 				case VolumeDescriptorType.Primary:
@@ -66,16 +67,21 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 			}
 			i += 2048;
 		}
-		if (candidateVDs.length === 0) {
-			throw new ErrnoError(Errno.EIO, `Unable to find a suitable volume descriptor.`);
+		if (!candidateVDs.length) {
+			throw new ErrnoError(Errno.EIO, 'Unable to find a suitable volume descriptor.');
 		}
 		for (const v of candidateVDs) {
 			// Take an SVD over a PVD.
-			if (!this._pvd || this._pvd.type !== VolumeDescriptorType.Supplementary) {
+			if (this._pvd?.type != VolumeDescriptorType.Supplementary) {
 				this._pvd = v;
 			}
 		}
-		this._root = this._pvd.rootDirectoryEntry(this._data);
+
+		if (!this._pvd) {
+			throw new ErrnoError(Errno.EINVAL, 'No primary volume descriptor');
+		}
+
+		this._root = this._pvd.rootDirectoryEntry(this.data);
 		this._name = name;
 	}
 
@@ -84,7 +90,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 			...super.metadata(),
 			name: ['iso', this._name, this._pvd?.name, this._root && this._root.hasRockRidge && 'RockRidge'].filter(e => e).join(':'),
 			readonly: true,
-			totalSpace: this._data.byteLength,
+			totalSpace: this.data.byteLength,
 		};
 	}
 
@@ -107,10 +113,15 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 			throw ErrnoError.With('ENOENT', path, 'openFile');
 		}
 
-		if (record.isSymlink(this._data)) {
-			return this.openFileSync(resolve(path, record.getSymlinkPath(this._data)), flag);
+		if (record.isSymlink(this.data)) {
+			return this.openFileSync(resolve(path, record.getSymlinkPath(this.data)), flag);
 		}
-		const data = !record.isDirectory(this._data) ? record.getFile(this._data) : undefined;
+
+		if (record.isDirectory(this.data)) {
+			throw ErrnoError.With('EISDIR', path, 'openFile');
+		}
+
+		const data = record.getFile(this.data);
 		const stats = this._getStats(path, record)!;
 
 		return new NoSyncFile(this, path, flag, stats, new Uint8Array(data));
@@ -123,14 +134,14 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 			throw ErrnoError.With('ENOENT', path, 'readdir');
 		}
 
-		if (record.isDirectory(this._data)) {
-			return record.getDirectory(this._data).fileList.slice(0);
+		if (record.isDirectory(this.data)) {
+			return record.getDirectory(this.data).fileList.slice(0);
 		}
 
 		throw ErrnoError.With('ENOTDIR', path, 'readdir');
 	}
 
-	private _getDirectoryRecord(path: string): DirectoryRecord | null {
+	private _getDirectoryRecord(path: string): DirectoryRecord | undefined {
 		// Special case.
 		if (path === '/') {
 			return this._root;
@@ -138,23 +149,23 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		const components = path.split('/').slice(1);
 		let dir = this._root;
 		for (const component of components) {
-			if (!dir.isDirectory(this._data)) {
+			if (!dir.isDirectory(this.data)) {
 				return;
 			}
-			dir = dir.getDirectory(this._data).getRecord(component);
+			dir = dir.getDirectory(this.data).getRecord(component);
 			if (!dir) {
-				return null;
+				return;
 			}
 		}
 		return dir;
 	}
 
-	private _getStats(path: string, record: DirectoryRecord): Stats | null {
-		if (record.isSymlink(this._data)) {
-			const newP = resolve(path, record.getSymlinkPath(this._data));
+	private _getStats(path: string, record: DirectoryRecord): Stats | undefined {
+		if (record.isSymlink(this.data)) {
+			const newP = resolve(path, record.getSymlinkPath(this.data));
 			const dirRec = this._getDirectoryRecord(newP);
 			if (!dirRec) {
-				return null;
+				return;
 			}
 			return this._getStats(newP, dirRec);
 		}
@@ -165,7 +176,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 			mtimeMs = time,
 			ctimeMs = time;
 		if (record.hasRockRidge) {
-			const entries = record.getSUEntries(this._data);
+			const entries = record.getSUEntries(this.data);
 			for (const entry of entries) {
 				if (entry instanceof PXEntry) {
 					mode = Number(entry.mode);
@@ -190,7 +201,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		// Mask out writeable flags. This is a RO file system.
 		mode &= 0o555;
 		return new Stats({
-			mode: mode | (record.isDirectory(this._data) ? S_IFDIR : S_IFREG),
+			mode: mode | (record.isDirectory(this.data) ? S_IFDIR : S_IFREG),
 			size: record.dataLength,
 			atimeMs,
 			mtimeMs,

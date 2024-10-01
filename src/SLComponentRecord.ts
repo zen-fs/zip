@@ -8,16 +8,20 @@ export const enum SLComponentFlags {
 }
 
 export class SLComponentRecord {
-	constructor(protected data: ArrayBuffer) {}
+	public constructor(protected data: Uint8Array) {}
+
 	public get flags(): SLComponentFlags {
 		return this.data[0];
 	}
+
 	public get length(): number {
 		return 2 + this.componentLength;
 	}
+
 	public get componentLength(): number {
 		return this.data[1];
 	}
+
 	public content(getString: TGetString): string {
 		return getString(this.data, 2, this.componentLength);
 	}

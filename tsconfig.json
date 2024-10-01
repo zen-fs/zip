@@ -6,7 +6,7 @@
 		"lib": ["ESNext", "ESNext.Disposable"],
 		"moduleResolution": "NodeNext",
 		"declaration": true,
-		"skipLibCheck": true
+		"strict": true
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules"]

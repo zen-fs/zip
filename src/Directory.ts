@@ -6,7 +6,8 @@ export abstract class Directory<T extends DirectoryRecord> {
 	protected _record: T;
 	private _fileList: string[] = [];
 	private _fileMap: { [name: string]: T } = {};
-	constructor(record: T, isoData: ArrayBuffer) {
+
+	public constructor(record: T, isoData: Uint8Array) {
 		this._record = record;
 		let i = record.lba;
 		let limit = i + record.dataLength;
@@ -42,6 +43,7 @@ export abstract class Directory<T extends DirectoryRecord> {
 			i += r.length;
 		}
 	}
+
 	/**
 	 * Get the record with the given name.
 	 * Returns undefined if not present.
@@ -49,28 +51,33 @@ export abstract class Directory<T extends DirectoryRecord> {
 	public getRecord(name: string): DirectoryRecord {
 		return this._fileMap[name];
 	}
+
 	public get fileList(): string[] {
 		return this._fileList;
 	}
-	public getDotEntry(isoData: ArrayBuffer): T {
+
+	public getDotEntry(isoData: Uint8Array): T {
 		return this._constructDirectoryRecord(isoData.slice(this._record.lba));
 	}
-	protected abstract _constructDirectoryRecord(data: ArrayBuffer): T;
+
+	protected abstract _constructDirectoryRecord(data: Uint8Array): T;
 }
 export class ISODirectory extends Directory<ISODirectoryRecord> {
-	constructor(record: ISODirectoryRecord, isoData: ArrayBuffer) {
+	public constructor(record: ISODirectoryRecord, isoData: Uint8Array) {
 		super(record, isoData);
 	}
-	protected _constructDirectoryRecord(data: ArrayBuffer): ISODirectoryRecord {
+
+	protected _constructDirectoryRecord(data: Uint8Array): ISODirectoryRecord {
 		return new ISODirectoryRecord(data, this._record.rockRidgeOffset);
 	}
 }
 
 export class JolietDirectory extends Directory<JolietDirectoryRecord> {
-	constructor(record: JolietDirectoryRecord, isoData: ArrayBuffer) {
+	public constructor(record: JolietDirectoryRecord, isoData: Uint8Array) {
 		super(record, isoData);
 	}
-	protected _constructDirectoryRecord(data: ArrayBuffer): JolietDirectoryRecord {
+
+	protected _constructDirectoryRecord(data: Uint8Array): JolietDirectoryRecord {
 		return new JolietDirectoryRecord(data, this._record.rockRidgeOffset);
 	}
 }

@@ -1,10 +1,9 @@
 import { decode } from '@zenfs/core/utils.js';
 
-export function getASCIIString(data: ArrayBuffer, startIndex: number, length: number) {
-	const buffer = data.slice(startIndex, startIndex + length);
-	return decode(new Uint8Array(buffer));
+export function getASCIIString(data: Uint8Array, startIndex: number, length: number) {
+	return decode(data.slice(startIndex, startIndex + length));
 }
-export function getJolietString(data: ArrayBuffer, startIndex: number, length: number): string {
+export function getJolietString(data: Uint8Array, startIndex: number, length: number): string {
 	if (length === 1) {
 		// Special: Root, parent, current directory are still a single byte.
 		return String.fromCharCode(data[startIndex]);
@@ -19,7 +18,7 @@ export function getJolietString(data: ArrayBuffer, startIndex: number, length: n
 	}
 	return chars.join('');
 }
-export function getDate(data: ArrayBuffer, startIndex: number): Date {
+export function getDate(data: Uint8Array, startIndex: number): Date {
 	const year = parseInt(getASCIIString(data, startIndex, 4), 10);
 	const mon = parseInt(getASCIIString(data, startIndex + 4, 2), 10);
 	const day = parseInt(getASCIIString(data, startIndex + 6, 2), 10);
@@ -30,8 +29,8 @@ export function getDate(data: ArrayBuffer, startIndex: number): Date {
 	// Last is a time-zone offset, but JavaScript dates don't support time zones well.
 	return new Date(year, mon, day, hour, min, sec, hundrethsSec * 100);
 }
-export type TGetString = (d: ArrayBuffer, i: number, len: number) => string;
-export function getShortFormDate(data: ArrayBuffer, startIndex: number): Date {
+export type TGetString = (d: Uint8Array, i: number, len: number) => string;
+export function getShortFormDate(data: Uint8Array, startIndex: number): Date {
 	const yearsSince1900 = data[startIndex];
 	const month = data[startIndex + 1];
 	const day = data[startIndex + 2];

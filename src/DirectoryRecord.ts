@@ -8,18 +8,22 @@ export abstract class DirectoryRecord {
 	protected _view: DataView;
 	// Offset at which system use entries begin. Set to -1 if not enabled.
 	protected _rockRidgeOffset: number;
-	protected _suEntries: SystemUseEntry[] | null = null;
-	private _fileOrDir: ArrayBuffer | Directory<DirectoryRecord> | null = null;
-	constructor(
-		protected data: ArrayBuffer,
+	protected _suEntries?: SystemUseEntry[];
+	protected _file?: Uint8Array;
+	protected _dir?: Directory<DirectoryRecord>;
+
+	public constructor(
+		protected data: Uint8Array,
 		rockRidgeOffset: number
 	) {
-		this._view = new DataView(data);
+		this._view = new DataView(data.buffer);
 		this._rockRidgeOffset = rockRidgeOffset;
 	}
+
 	public get hasRockRidge(): boolean {
 		return this._rockRidgeOffset > -1;
 	}
+
 	public get rockRidgeOffset(): number {
 		return this._rockRidgeOffset;
 	}
@@ -27,45 +31,56 @@ export abstract class DirectoryRecord {
 	 * !!ONLY VALID ON ROOT NODE!!
 	 * Checks if Rock Ridge is enabled, and sets the offset.
 	 */
-	public rootCheckForRockRidge(isoData: ArrayBuffer): void {
+	public rootCheckForRockRidge(isoData: Uint8Array): void {
 		const dir = this.getDirectory(isoData);
 		this._rockRidgeOffset = dir.getDotEntry(isoData)._getRockRidgeOffset(isoData);
 		if (this._rockRidgeOffset > -1) {
 			// Wipe out directory. Start over with RR knowledge.
-			this._fileOrDir = null;
+			this._dir = undefined;
 		}
 	}
+
 	public get length(): number {
-		return this._view[0];
+		return this.data[0];
 	}
+
 	public get extendedAttributeRecordLength(): number {
-		return this._view[1];
+		return this.data[1];
 	}
+
 	public get lba(): number {
 		return this._view.getUint32(2, true) * 2048;
 	}
+
 	public get dataLength(): number {
 		return this._view.getUint32(10, true);
 	}
+
 	public get recordingDate(): Date {
 		return getShortFormDate(this.data, 18);
 	}
+
 	public get fileFlags(): number {
-		return this._view[25];
+		return this.data[25];
 	}
+
 	public get fileUnitSize(): number {
-		return this._view[26];
+		return this.data[26];
 	}
+
 	public get interleaveGapSize(): number {
-		return this._view[27];
+		return this.data[27];
 	}
+
 	public get volumeSequenceNumber(): number {
 		return this._view.getUint16(28, true);
 	}
+
 	public get identifier(): string {
-		return this._getString(this.data, 33, this._view[32]);
+		return this._getString(this.data, 33, this.data[32]);
 	}
-	public fileName(isoData: ArrayBuffer): string {
+
+	public fileName(isoData: Uint8Array): string {
 		if (this.hasRockRidge) {
 			const fn = this._rockRidgeFilename(isoData);
 			if (fn != null) {
@@ -92,7 +107,8 @@ export abstract class DirectoryRecord {
 		// Include up to version separator.
 		return ident.slice(0, versionSeparator);
 	}
-	public isDirectory(isoData: ArrayBuffer): boolean {
+
+	public isDirectory(isoData: Uint8Array): boolean {
 		let rv = !!(this.fileFlags & FileFlags.Directory);
 		// If it lacks the Directory flag, it may still be a directory if we've exceeded the directory
 		// depth limit. Rock Ridge marks these as files and adds a special attribute.
@@ -101,10 +117,12 @@ export abstract class DirectoryRecord {
 		}
 		return rv;
 	}
-	public isSymlink(isoData: ArrayBuffer): boolean {
+
+	public isSymlink(isoData: Uint8Array): boolean {
 		return this.hasRockRidge && this.getSUEntries(isoData).filter(e => e instanceof SLEntry).length > 0;
 	}
-	public getSymlinkPath(isoData: ArrayBuffer): string {
+
+	public getSymlinkPath(isoData: Uint8Array): string {
 		let p = '';
 		const entries = this.getSUEntries(isoData);
 		for (const entry of entries) {
@@ -138,25 +156,24 @@ export abstract class DirectoryRecord {
 			return p;
 		}
 	}
-	public getFile(isoData: ArrayBuffer): ArrayBuffer {
+
+	public getFile(isoData: Uint8Array): Uint8Array {
 		if (this.isDirectory(isoData)) {
-			throw new Error(`Tried to get a File from a directory.`);
+			throw new Error('Tried to get a File from a directory.');
 		}
-		if (this._fileOrDir === null) {
-			this._fileOrDir = isoData.slice(this.lba, this.lba + this.dataLength);
-		}
-		return <ArrayBuffer>this._fileOrDir;
+		this._file ||= isoData.slice(this.lba, this.lba + this.dataLength);
+		return this._file;
 	}
-	public getDirectory(isoData: ArrayBuffer): Directory<DirectoryRecord> {
+
+	public getDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
 		if (!this.isDirectory(isoData)) {
-			throw new Error(`Tried to get a Directory from a file.`);
+			throw new Error('Tried to get a Directory from a file.');
 		}
-		if (this._fileOrDir === null) {
-			this._fileOrDir = this._constructDirectory(isoData);
-		}
-		return <Directory<this>>this._fileOrDir;
+		this._dir ||= this._constructDirectory(isoData);
+		return this._dir;
 	}
-	public getSUEntries(isoData: ArrayBuffer): SystemUseEntry[] {
+
+	public getSUEntries(isoData: Uint8Array): SystemUseEntry[] {
 		if (!this._suEntries) {
 			this._constructSUEntries(isoData);
 		}
@@ -166,8 +183,8 @@ export abstract class DirectoryRecord {
 		return this._getString(this.data, i, len);
 	}
 	protected abstract _getString: TGetString;
-	protected abstract _constructDirectory(isoData: ArrayBuffer): Directory<DirectoryRecord>;
-	protected _rockRidgeFilename(isoData: ArrayBuffer): string | null {
+	protected abstract _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord>;
+	protected _rockRidgeFilename(isoData: Uint8Array): string | null {
 		const nmEntries = <NMEntry[]>this.getSUEntries(isoData).filter(e => e instanceof NMEntry);
 		if (nmEntries.length === 0 || nmEntries[0].flags & (NMFlags.CURRENT | NMFlags.PARENT)) {
 			return null;
@@ -181,8 +198,8 @@ export abstract class DirectoryRecord {
 		}
 		return str;
 	}
-	private _constructSUEntries(isoData: ArrayBuffer): void {
-		let i = 33 + this._view[32];
+	private _constructSUEntries(isoData: Uint8Array): void {
+		let i = 33 + this.data[32];
 		if (i % 2 === 1) {
 			// Skip padding field.
 			i++;
@@ -195,7 +212,7 @@ export abstract class DirectoryRecord {
 	 * Returns -1 if rock ridge is not enabled. Otherwise, returns the offset
 	 * at which system use fields begin.
 	 */
-	private _getRockRidgeOffset(isoData: ArrayBuffer): number {
+	private _getRockRidgeOffset(isoData: Uint8Array): number {
 		// In the worst case, we get some garbage SU entries.
 		// Fudge offset to 0 before proceeding.
 		this._rockRidgeOffset = 0;
@@ -220,10 +237,10 @@ export abstract class DirectoryRecord {
 }
 
 export class ISODirectoryRecord extends DirectoryRecord {
-	constructor(data: ArrayBuffer, rockRidgeOffset: number) {
+	public constructor(data: Uint8Array, rockRidgeOffset: number) {
 		super(data, rockRidgeOffset);
 	}
-	protected _constructDirectory(isoData: ArrayBuffer): Directory<DirectoryRecord> {
+	protected _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
 		return new ISODirectory(this, isoData);
 	}
 	protected get _getString(): TGetString {
@@ -232,10 +249,10 @@ export class ISODirectoryRecord extends DirectoryRecord {
 }
 
 export class JolietDirectoryRecord extends DirectoryRecord {
-	constructor(data: ArrayBuffer, rockRidgeOffset: number) {
+	public constructor(data: Uint8Array, rockRidgeOffset: number) {
 		super(data, rockRidgeOffset);
 	}
-	protected _constructDirectory(isoData: ArrayBuffer): Directory<DirectoryRecord> {
+	protected _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
 		return new JolietDirectory(this, isoData);
 	}
 	protected get _getString(): TGetString {
