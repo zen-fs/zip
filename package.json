@@ -56,7 +56,7 @@
 		"prettier": "^3.2.5",
 		"ts-jest": "^29.1.3",
 		"typedoc": "^0.25.1",
-		"typescript": "5.2.2"
+		"typescript": "^5.4.0"
 	},
 	"peerDependencies": {
 		"@zenfs/core": "^1.0.0"
