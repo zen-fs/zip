@@ -425,7 +425,7 @@ class DigitalSignature {
 export
 @struct()
 class Header {
-	constructor(protected data: ArrayBufferLike) {
+	public constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x06054b50) {
 			throw new ErrnoError(Errno.EINVAL, 'Invalid Zip file: End of central directory record has invalid signature: 0x' + this.signature.toString(16));

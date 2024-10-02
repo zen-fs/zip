@@ -1,38 +1,35 @@
-/* eslint-disable no-debugger */
-import { configure, fs } from '@zenfs/core';
+import { configureSingle, fs } from '@zenfs/core';
 import { readFileSync } from 'fs';
-import { Zip } from '../dist/ZipFS.js';
-import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { Zip } from '../src/ZipFS.js';
+import { test, suite } from 'node:test';
+import { equal } from 'node:assert';
 
-describe('Basic ZIP operations', () => {
+suite('Basic ZIP operations', () => {
 	test('Configure', async () => {
 		const buffer = readFileSync(dirname(fileURLToPath(import.meta.url)) + '/data.zip');
 		const data = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-		await configure<typeof Zip>({
-			mounts: {
-				'/': { backend: Zip, data },
-			},
-		});
+		await configureSingle({ backend: Zip, data });
 	});
 
 	test('readdir /', () => {
-		expect(fs.readdirSync('/').length).toBe(3);
+		equal(fs.readdirSync('/').length, 3);
 	});
 
 	test('read /one.txt', () => {
-		expect(fs.readFileSync('/one.txt', 'utf8')).toBe('1');
+		equal(fs.readFileSync('/one.txt', 'utf8'), '1');
 	});
 
 	test('read /two.txt', () => {
-		expect(fs.readFileSync('/two.txt', 'utf8')).toBe('two');
+		equal(fs.readFileSync('/two.txt', 'utf8'), 'two');
 	});
 
 	test('readdir /nested', () => {
-		expect(fs.readdirSync('/nested').length).toBe(1);
+		equal(fs.readdirSync('/nested').length, 1);
 	});
 
 	test('readdir /nested/omg.txt', () => {
-		expect(fs.readFileSync('/nested/omg.txt', 'utf8')).toBe('This is a nested file!');
+		equal(fs.readFileSync('/nested/omg.txt', 'utf8'), 'This is a nested file!');
 	});
 });
