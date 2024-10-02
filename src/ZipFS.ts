@@ -137,7 +137,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 				this.directories.set(dir, []);
 			}
 
-			this.directories.get(dir).push(base);
+			this.directories.get(dir)!.push(base);
 		}
 	}
 
@@ -167,11 +167,13 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			});
 		}
 
-		if (this.files.has(path)) {
-			return this.files.get(path).stats;
+		const entry = this.files.get(path);
+
+		if (!entry) {
+			throw ErrnoError.With('ENOENT', path, 'stat');
 		}
 
-		throw ErrnoError.With('ENOENT', path, 'stat');
+		return entry.stats;
 	}
 
 	public openFileSync(path: string, flag: string): NoSyncFile<this> {
@@ -182,7 +184,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 
 		const stats = this.statSync(path);
 
-		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : this.files.get(path).data);
+		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : this.files.get(path)?.data);
 	}
 
 	public readdirSync(path: string): string[] {
@@ -192,7 +194,13 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			throw ErrnoError.With('ENOTDIR', path, 'readdir');
 		}
 
-		return this.directories.get(path);
+		const entries = this.directories.get(path);
+
+		if (!entries) {
+			throw ErrnoError.With('ENODATA', path, 'readdir');
+		}
+
+		return entries;
 	}
 }
 
@@ -222,6 +230,6 @@ export const Zip = {
 	},
 
 	create(options: ZipOptions): ZipFS {
-		return new ZipFS(options.name, options.data);
+		return new ZipFS(options.name ?? '', options.data);
 	},
 } satisfies Backend<ZipFS, ZipOptions>;

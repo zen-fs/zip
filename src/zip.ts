@@ -37,36 +37,36 @@ export enum AttributeCompat {
 export
 @struct()
 class LocalFileHeader {
-	constructor(protected data: ArrayBufferLike) {
+	public constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature !== 0x04034b50) {
 			throw new ErrnoError(Errno.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this.signature);
 		}
 	}
 
-	@t.uint32 public signature: number;
+	@t.uint32 public signature!: number;
 
 	/**
 	 * The minimum supported ZIP specification version needed to extract the file.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.3
 	 */
-	@t.uint16 public versionNeeded: number;
+	@t.uint16 public versionNeeded!: number;
 
 	/**
 	 * General purpose bit flags
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.4
 	 */
-	@t.uint16 public flags: number;
+	@t.uint16 public flags!: number;
 
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.5
 	 */
-	@t.uint16 public compressionMethod: CompressionMethod;
+	@t.uint16 public compressionMethod!: CompressionMethod;
 
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.6
 	 */
-	@t.uint32 protected datetime: number;
+	@t.uint32 protected datetime!: number;
 
 	/**
 	 * The date and time are encoded in standard MS-DOS format.
@@ -80,7 +80,7 @@ class LocalFileHeader {
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.7
 	 */
-	@t.uint32 public crc32: number;
+	@t.uint32 public crc32!: number;
 
 	/**
 	 * The size of the file compressed.
@@ -88,7 +88,7 @@ class LocalFileHeader {
 	 * central directory's entry is used
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.8
 	 */
-	@t.uint32 public compressedSize: number;
+	@t.uint32 public compressedSize!: number;
 
 	/**
 	 * The size of the file uncompressed
@@ -96,19 +96,19 @@ class LocalFileHeader {
 	 * central directory's entry is used
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.9
 	 */
-	@t.uint32 public uncompressedSize: number;
+	@t.uint32 public uncompressedSize!: number;
 
 	/**
 	 * The length of the file name
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.10
 	 */
-	@t.uint16 public nameLength: number;
+	@t.uint16 public nameLength!: number;
 
 	/**
 	 * The length of the extra field
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.11
 	 */
-	@t.uint16 public extraLength: number;
+	@t.uint16 public extraLength!: number;
 
 	/**
 	 * The name of the file, with optional relative path.
@@ -143,9 +143,9 @@ class LocalFileHeader {
 export
 @struct()
 class ExtraDataRecord {
-	@t.uint32 public signature: number;
+	@t.uint32 public signature!: number;
 
-	@t.uint32 public length: number;
+	@t.uint32 public length!: number;
 
 	constructor(public readonly data: ArrayBufferLike) {
 		deserialize(this, data);
@@ -191,7 +191,7 @@ class FileEntry {
 		this.comment = safeDecode(this._data, this.useUTF8, sizeof_FileEntry + this.nameLength + this.extraLength, this.commentLength);
 	}
 
-	@t.uint32 public signature: number;
+	@t.uint32 public signature!: number;
 
 	/**
 	 * The lower byte of "version made by", indicates the ZIP specification version supported by the software used to encode the file.
@@ -199,25 +199,25 @@ class FileEntry {
 	 * minor — `zipVersion` mod 10
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.2
 	 */
-	@t.uint8 public zipVersion: number;
+	@t.uint8 public zipVersion!: number;
 
 	/**
 	 * The upper byte of "version made by", indicates the compatibility of the file attribute information.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.2
 	 */
-	@t.uint8 public attributeCompat: AttributeCompat;
+	@t.uint8 public attributeCompat!: AttributeCompat;
 
 	/**
 	 * The minimum supported ZIP specification version needed to extract the file.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.3
 	 */
-	@t.uint16 public versionNeeded: number;
+	@t.uint16 public versionNeeded!: number;
 
 	/**
 	 * General purpose bit flags
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.4
 	 */
-	@t.uint16 public flag: number;
+	@t.uint16 public flag!: number;
 
 	public get useUTF8(): boolean {
 		return !!(this.flag & (1 << 11));
@@ -229,12 +229,12 @@ class FileEntry {
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.5
 	 */
-	@t.uint16 public compressionMethod: CompressionMethod;
+	@t.uint16 public compressionMethod!: CompressionMethod;
 
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.6
 	 */
-	@t.uint32 protected datetime: number;
+	@t.uint32 protected datetime!: number;
 
 	/**
 	 * The date and time are encoded in standard MS-DOS format.
@@ -248,48 +248,48 @@ class FileEntry {
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.7
 	 */
-	@t.uint32 public crc32: number;
+	@t.uint32 public crc32!: number;
 
 	/**
 	 * The size of the file compressed
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.8
 	 */
-	@t.uint32 public compressedSize: number;
+	@t.uint32 public compressedSize!: number;
 
 	/**
 	 * The size of the file uncompressed
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.9
 	 */
-	@t.uint32 public uncompressedSize: number;
+	@t.uint32 public uncompressedSize!: number;
 
 	/**
 	 * The length of the file name
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.10
 	 */
-	@t.uint16 public nameLength: number;
+	@t.uint16 public nameLength!: number;
 
 	/**
 	 * The length of the extra field
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.11
 	 */
-	@t.uint16 public extraLength: number;
+	@t.uint16 public extraLength!: number;
 
 	/**
 	 * The length of the comment
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.12
 	 */
-	@t.uint16 public commentLength: number;
+	@t.uint16 public commentLength!: number;
 
 	/**
 	 * The number of the disk on which this file begins.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.13
 	 */
-	@t.uint16 public startDisk: number;
+	@t.uint16 public startDisk!: number;
 
 	/**
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.14
 	 */
-	@t.uint16 public internalAttributes: number;
+	@t.uint16 public internalAttributes!: number;
 
 	/**
 	 * The mapping of the external attributes is host-system dependent.
@@ -298,14 +298,14 @@ class FileEntry {
 	 * @see attributeCompat
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.15
 	 */
-	@t.uint32 public externalAttributes: number;
+	@t.uint32 public externalAttributes!: number;
 
 	/**
 	 * This is the offset from the start of the first disk on which
 	 * this file appears to where the local header should be found.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.16
 	 */
-	@t.uint32 public headerRelativeOffset: number;
+	@t.uint32 public headerRelativeOffset!: number;
 
 	/**
 	 * The name of the file, with optional relative path.
@@ -407,9 +407,9 @@ class DigitalSignature {
 		}
 	}
 
-	@t.uint32 public signature: number;
+	@t.uint32 public signature!: number;
 
-	@t.uint16 public size: number;
+	@t.uint16 public size!: number;
 
 	public get signatureData(): ArrayBuffer {
 		return this.data.slice(6, 6 + this.size);
@@ -432,49 +432,49 @@ class Header {
 		}
 	}
 
-	@t.uint32 public signature: number;
+	@t.uint32 public signature!: number;
 
 	/**
 	 * The number of this disk
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.19
 	 */
-	@t.uint16 public disk: number;
+	@t.uint16 public disk!: number;
 
 	/**
 	 * The number of the disk with the start of the entries
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.20
 	 */
-	@t.uint16 public entriesDisk: number;
+	@t.uint16 public entriesDisk!: number;
 
 	/**
 	 * Total number of entries on this disk
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.21
 	 */
-	@t.uint16 public diskEntryCount: number;
+	@t.uint16 public diskEntryCount!: number;
 
 	/**
 	 * Total number of entries
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.22
 	 */
-	@t.uint16 public totalEntryCount: number;
+	@t.uint16 public totalEntryCount!: number;
 
 	/**
 	 * Size of the "central directory"
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.23
 	 */
-	@t.uint32 public size: number;
+	@t.uint32 public size!: number;
 
 	/**
 	 * Offset of start of "central directory" with respect to the starting disk number
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.24
 	 */
-	@t.uint32 public offset: number;
+	@t.uint32 public offset!: number;
 
 	/**
 	 * Comment length
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.25
 	 */
-	@t.uint16 public commentLength: number;
+	@t.uint16 public commentLength!: number;
 
 	/**
 	 * Assuming the content is UTF-8 encoded. The specification doesn't specify.

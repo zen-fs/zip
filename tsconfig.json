@@ -5,9 +5,9 @@
 		"outDir": "dist",
 		"lib": ["ESNext", "DOM"],
 		"moduleResolution": "NodeNext",
-		"esModuleInterop": true,
 		"declaration": true,
-		"sourceMap": true
+		"sourceMap": true,
+		"strict": true
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules"]
