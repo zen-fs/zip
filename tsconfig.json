@@ -7,8 +7,7 @@
 		"moduleResolution": "NodeNext",
 		"esModuleInterop": true,
 		"declaration": true,
-		"sourceMap": true,
-		"experimentalDecorators": true
+		"sourceMap": true
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules"]
