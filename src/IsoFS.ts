@@ -6,8 +6,9 @@ import { NoSyncFile, isWriteable } from '@zenfs/core/file.js';
 import { FileSystem, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
 import { Readonly, Sync } from '@zenfs/core/mixins/index.js';
 import { Stats } from '@zenfs/core/stats.js';
-import { DirectoryRecord } from './DirectoryRecord.js';
-import { PrimaryOrSupplementaryVolumeDescriptor, PrimaryVolumeDescriptor, SupplementaryVolumeDescriptor, VolumeDescriptorType } from './VolumeDescriptor.js';
+import type { DirectoryRecord } from './DirectoryRecord.js';
+import type { PrimaryOrSupplementaryVolumeDescriptor } from './VolumeDescriptor.js';
+import { PrimaryVolumeDescriptor, SupplementaryVolumeDescriptor, VolumeDescriptorType } from './VolumeDescriptor.js';
 import { PXEntry, TFEntry, TFFlag } from './entries.js';
 
 /**
@@ -54,7 +55,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		const candidateVDs = new Array<PrimaryOrSupplementaryVolumeDescriptor>();
 		while (!vdTerminatorFound && i < data.length) {
 			const slice = this.data.slice(i);
-			switch (slice[0]) {
+			switch (slice[0] as VolumeDescriptorType) {
 				case VolumeDescriptorType.Primary:
 					candidateVDs.push(new PrimaryVolumeDescriptor(slice));
 					break;

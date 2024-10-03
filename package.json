@@ -43,18 +43,20 @@
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
+		"@eslint/js": "^9.11.1",
 		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
+		"@stylistic/eslint-plugin": "^2.8.0",
+		"@types/eslint__js": "^8.42.3",
 		"@types/node": "^20.12.7",
-		"@typescript-eslint/eslint-plugin": "^7.7.0",
-		"@typescript-eslint/parser": "^7.7.0",
 		"esbuild": "^0.24.0",
-		"eslint": "^8.36.0",
+		"eslint": "^9.11.1",
 		"prettier": "^3.2.5",
 		"typedoc": "^0.26.7",
-		"typescript": "^5.4.0"
+		"typescript": "^5.4.0",
+		"typescript-eslint": "^8.8.0"
 	},
 	"peerDependencies": {
-		"@zenfs/core": "^1.0.0"
+		"@zenfs/core": "^1.0.2"
 	},
 	"dependencies": {
 		"utilium": "^0.7.0"
