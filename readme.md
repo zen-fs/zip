@@ -7,7 +7,7 @@
 
 ## Backend
 
-This package adds the `Iso` backend, which allows you to create a _readonly_ file system from a iso file.
+This package adds the `Iso` backend, which allows you to create a _readonly_ file system from a `.iso` file.
 
 For more information, see the [API documentation](https://zen-fs.github.io/iso).
 
