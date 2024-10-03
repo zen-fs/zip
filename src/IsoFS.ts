@@ -4,11 +4,11 @@ import { resolve } from '@zenfs/core/emulation/path.js';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
 import { NoSyncFile, isWriteable } from '@zenfs/core/file.js';
 import { FileSystem, type FileSystemMetadata } from '@zenfs/core/filesystem.js';
+import { Readonly, Sync } from '@zenfs/core/mixins/index.js';
 import { Stats } from '@zenfs/core/stats.js';
 import { DirectoryRecord } from './DirectoryRecord.js';
-import { PrimaryOrSupplementaryVolumeDescriptor, PrimaryVolumeDescriptor, SupplementaryVolumeDescriptor, VolumeDescriptor, VolumeDescriptorType } from './VolumeDescriptor.js';
-import { PXEntry, TFEntry, TFFlags } from './entries.js';
-import { Sync, Readonly } from '@zenfs/core/mixins/index.js';
+import { PrimaryOrSupplementaryVolumeDescriptor, PrimaryVolumeDescriptor, SupplementaryVolumeDescriptor, VolumeDescriptorType } from './VolumeDescriptor.js';
+import { PXEntry, TFEntry, TFFlag } from './entries.js';
 
 /**
  * Options for IsoFS file system instances.
@@ -46,6 +46,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 	 */
 	public constructor({ data, name = '' }: IsoOptions) {
 		super();
+		this._name = name;
 		this.data = data;
 		// Skip first 16 sectors.
 		let vdTerminatorFound = false;
@@ -53,8 +54,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		const candidateVDs = new Array<PrimaryOrSupplementaryVolumeDescriptor>();
 		while (!vdTerminatorFound) {
 			const slice = this.data.slice(i);
-			const vd = new VolumeDescriptor(slice);
-			switch (vd.type) {
+			switch (slice[0]) {
 				case VolumeDescriptorType.Primary:
 					candidateVDs.push(new PrimaryVolumeDescriptor(slice));
 					break;
@@ -82,7 +82,6 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		}
 
 		this._root = this._pvd.rootDirectoryEntry(this.data);
-		this._name = name;
 	}
 
 	public metadata(): FileSystemMetadata {
@@ -187,13 +186,13 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 					continue;
 				}
 				const flags = entry.flags;
-				if (flags & TFFlags.ACCESS) {
+				if (flags & TFFlag.ACCESS) {
 					atimeMs = entry.access!.getTime();
 				}
-				if (flags & TFFlags.MODIFY) {
+				if (flags & TFFlag.MODIFY) {
 					mtimeMs = entry.modify!.getTime();
 				}
-				if (flags & TFFlags.CREATION) {
+				if (flags & TFFlag.CREATION) {
 					ctimeMs = entry.creation!.getTime();
 				}
 			}

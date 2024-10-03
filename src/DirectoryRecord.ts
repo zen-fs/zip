@@ -1,10 +1,10 @@
-import { decode, Errno, ErrnoError } from '@zenfs/core';
+import { Errno, ErrnoError, decode } from '@zenfs/core';
 import { deserialize, member, struct, types as t } from 'utilium';
 import { type Directory, ISODirectory, JolietDirectory } from './Directory.js';
 import { SLComponentFlags } from './SLComponentRecord.js';
 import { FileFlags, rockRidgeIdentifier } from './constants.js';
 import { CLEntry, EREntry, NMEntry, NMFlags, RREntry, SLEntry, SPEntry, SystemUseEntry, constructSystemUseEntries } from './entries.js';
-import { ShortFormDate, getJolietString } from './utils.js';
+import { ShortFormDate } from './utils.js';
 
 @struct()
 export abstract class DirectoryRecord {
@@ -253,5 +253,5 @@ export class JolietDirectoryRecord extends DirectoryRecord {
 	protected _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
 		return new JolietDirectory(this, isoData);
 	}
-	protected _getString = getJolietString;
+	protected _getString = new TextDecoder('utf-16be').decode;
 }

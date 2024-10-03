@@ -1,7 +1,7 @@
-import { deserialize, struct, types as t, type Tuple } from 'utilium';
-import { SLComponentRecord } from './SLComponentRecord.js';
-import { getDate, getShortFormDate } from './utils.js';
 import { decode } from '@zenfs/core';
+import { deserialize, sizeof, struct, types as t, type Tuple } from 'utilium';
+import { SLComponentRecord } from './SLComponentRecord.js';
+import { LongFormDate, ShortFormDate } from './utils.js';
 
 export const enum EntrySignature {
 	CE = 0x4345,
@@ -129,7 +129,8 @@ export class ESEntry extends SystemUseEntry {
 }
 
 /**
- * RockRidge: Marks that RockRidge is in use [deprecated]
+ * RockRidge: Marks that RockRidge is in use
+ * @deprecated
  */
 
 export class RREntry extends SystemUseEntry {}
@@ -289,7 +290,7 @@ export class PLEntry extends SystemUseEntry {
 
 export class REEntry extends SystemUseEntry {}
 
-export const enum TFFlags {
+export const enum TFFlag {
 	CREATION = 1,
 	MODIFY = 1 << 1,
 	ACCESS = 1 << 2,
@@ -299,80 +300,59 @@ export const enum TFFlags {
 	EFFECTIVE = 1 << 6,
 	LONG_FORM = 1 << 7,
 }
+
 /**
  * RockRidge: Records file timestamps
  */
-
 export class TFEntry extends SystemUseEntry {
 	@t.uint8 public flags!: number;
 
-	public get creation(): Date | undefined {
-		if (!(this.flags & TFFlags.CREATION)) {
+	private _getDate(kind: TFFlag): Date | undefined {
+		if (!(this.flags & kind)) {
 			return;
 		}
 
-		return this._longFormDates() ? getDate(this.data.slice(5)) : getShortFormDate(this.data.slice(5));
+		// Count the number of flags set up to but not including `kind`
+		let index = 0;
+		for (let i = 0; i < kind - 1; i++) {
+			index += this.flags & (1 << i) ? 1 : 0;
+		}
+
+		const _Date = this.flags & TFFlag.LONG_FORM ? LongFormDate : ShortFormDate;
+		const offset = 5 + index * sizeof(_Date);
+		const date = new _Date();
+		deserialize(date, this.data.slice(offset, offset + sizeof(_Date)));
+		return date.date;
+	}
+
+	public get creation(): Date | undefined {
+		return this._getDate(TFFlag.CREATION);
 	}
 
 	public get modify(): Date | undefined {
-		if (!(this.flags & TFFlags.MODIFY)) {
-			return;
-		}
-		const previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
+		return this._getDate(TFFlag.MODIFY);
 	}
 
 	public get access(): Date | undefined {
-		if (!(this.flags & TFFlags.ACCESS)) {
-			return;
-		}
-		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
-		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
+		return this._getDate(TFFlag.ACCESS);
 	}
 
 	public get backup(): Date | undefined {
-		if (!(this.flags & TFFlags.BACKUP)) {
-			return;
-		}
-		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
-		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
-		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
+		return this._getDate(TFFlag.BACKUP);
 	}
 
 	public get expiration(): Date | undefined {
-		if (!(this.flags & TFFlags.EXPIRATION)) {
-			return;
-		}
-		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
-		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
-		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
-		previousDates += this.flags & TFFlags.BACKUP ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
+		return this._getDate(TFFlag.EXPIRATION);
 	}
 
 	public get effective(): Date | undefined {
-		if (!(this.flags & TFFlags.EFFECTIVE)) {
-			return;
-		}
-		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
-		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
-		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
-		previousDates += this.flags & TFFlags.BACKUP ? 1 : 0;
-		previousDates += this.flags & TFFlags.EXPIRATION ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
-	}
-
-	private _longFormDates(): boolean {
-		return !!(this.flags && TFFlags.LONG_FORM);
+		return this._getDate(TFFlag.EFFECTIVE);
 	}
 }
 
 /**
  * RockRidge: File data in sparse format.
  */
-
 export class SFEntry extends SystemUseEntry {
 	@t.uint64 public virtualSizeHigh!: bigint;
 

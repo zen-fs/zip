@@ -1,7 +1,9 @@
-import { ErrnoError, Errno } from '@zenfs/core/error.js';
-import { DirectoryRecord, ISODirectoryRecord, JolietDirectoryRecord } from './DirectoryRecord.js';
-import { getDate, getJolietString } from './utils.js';
 import { decode } from '@zenfs/core';
+import { Errno, ErrnoError } from '@zenfs/core/error.js';
+import type { TextDecoder as TTextDecoder } from 'util';
+import { deserialize, member, struct, types as t } from 'utilium';
+import { DirectoryRecord, ISODirectoryRecord, JolietDirectoryRecord } from './DirectoryRecord.js';
+import { LongFormDate } from './utils.js';
 
 export const enum VolumeDescriptorType {
 	BootRecord = 0,
@@ -11,75 +13,126 @@ export const enum VolumeDescriptorType {
 	SetTerminator = 255,
 }
 
+@struct()
 export class VolumeDescriptor {
-	protected _view: DataView;
 	public constructor(protected _data: Uint8Array) {
-		this._view = new DataView(_data.buffer);
+		deserialize(this, _data);
 	}
 
-	public get type(): VolumeDescriptorType {
-		return this._data[0];
-	}
+	@t.uint8 public type!: VolumeDescriptorType;
 
-	public get standardIdentifier(): string {
-		return decode(this._data.slice(1, 5));
-	}
+	@t.char(4) public standardIdentifier: string = '';
 
-	public get version(): number {
-		return this._data[6];
-	}
+	@t.uint8 public version!: number;
 
-	public get data(): Uint8Array {
-		return this._data.slice(7, 2048);
-	}
+	@t.char(1) protected __padding__7!: number;
 }
 
+@struct()
 export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescriptor {
-	private _root?: DirectoryRecord;
+	protected _decoder?: TTextDecoder;
 
+	protected _decode(data: Uint8Array): string {
+		this._decoder ||= new TextDecoder(this.name == 'Joilet' ? 'utf-16be' : 'utf-8');
+
+		return this._decoder.decode(data);
+	}
+
+	/**
+	 * The name of the system that can act upon sectors 0x00-0x0F for the volume.
+	 */
+	@t.char(32) protected _systemIdentifier = new Uint8Array(32);
+
+	/**
+	 * The name of the system that can act upon sectors 0x00-0x0F for the volume.
+	 */
 	public get systemIdentifier(): string {
-		return this._getString(8, 32);
+		return this._decode(this._systemIdentifier);
 	}
 
+	/**
+	 * Identification of this volume.
+	 */
+	@t.char(32) protected _volumeIdentifier = new Uint8Array(32);
+
+	/**
+	 * Identification of this volume.
+	 */
 	public get volumeIdentifier(): string {
-		return this._getString(40, 32);
+		return this._decode(this._volumeIdentifier);
 	}
 
-	public get volumeSpaceSize(): number {
-		return this._view.getUint32(80, true);
-	}
+	@t.char(8) protected __padding__72!: number;
 
-	public get volumeSetSize(): number {
-		return this._view.getUint16(120, true);
-	}
+	/**
+	 * Number of Logical Blocks in which the volume is recorded.
+	 */
+	@t.uint32 public volumeSpaceSize!: number;
+	@t.uint32 protected _volumeSpaceSizeBE!: number;
 
-	public get volumeSequenceNumber(): number {
-		return this._view.getUint16(124, true);
-	}
+	/**
+	 * This is only used by Joliet
+	 */
+	@t.char(32) protected escapeSequence = new Uint8Array(32);
 
-	public get logicalBlockSize(): number {
-		return this._view.getUint16(128, true);
-	}
+	/**
+	 * The size of the set in this logical volume (number of disks).
+	 */
+	@t.uint16 public volumeSetSize!: number;
+	@t.uint16 protected _volumeSetSizeBE!: number;
 
-	public get pathTableSize(): number {
-		return this._view.getUint32(132, true);
-	}
+	/**
+	 * The number of this disk in the Volume Set.
+	 */
+	@t.uint16 public volumeSequenceNumber!: number;
+	@t.uint16 protected _volumeSequenceNumberBE!: number;
 
-	public get locationOfTypeLPathTable(): number {
-		return this._view.getUint32(140, true);
-	}
+	/**
+	 * The size in bytes of a logical block.
+	 * NB: This means that a logical block on a CD could be something other than 2 KiB!
+	 */
+	@t.uint16 public logicalBlockSize!: number;
+	@t.uint16 protected _logicalBlockSizeBE!: number;
 
-	public get locationOfOptionalTypeLPathTable(): number {
-		return this._view.getUint32(144, true);
-	}
+	/**
+	 * The size in bytes of the path table.
+	 */
+	@t.uint32 public pathTableSize!: number;
+	@t.uint32 protected _pathTableSizeBE!: number;
+
+	/**
+	 * LBA location of the path table.
+	 * The path table pointed to contains only little-endian values.
+	 */
+	@t.uint32 public locationOfTypeLPathTable!: number;
+
+	/**
+	 * LBA location of the optional path table.
+	 * The path table pointed to contains only little-endian values.
+	 * Zero means that no optional path table exists.
+	 */
+	@t.uint32 public locationOfOptionalTypeLPathTable!: number;
+
+	@t.uint32 protected _locationOfTypeMPathTable!: number;
 
 	public get locationOfTypeMPathTable(): number {
-		return this._view.getUint32(148);
+		return new DataView(this._data.buffer).getUint32(148);
 	}
 
-	public get locationOfOptionalTypeMPathTable(): number {
-		return this._view.getUint32(152);
+	@t.uint32 protected _locationOfOptionalTypeMPathTable!: number;
+
+	public locationOfOptionalTypeMPathTable(): number {
+		return new DataView(this._data.buffer).getUint32(152);
 	}
+
+	/**
+	 * Directory entry for the root directory.
+	 * Note that this is not an LBA address,
+	 * it is the actual Directory Record,
+	 * which contains a single byte Directory Identifier (0x00),
+	 * hence the fixed 34 byte size.
+	 */
+	@member(DirectoryRecord) protected _root!: DirectoryRecord;
 
 	public rootDirectoryEntry(isoData: Uint8Array): DirectoryRecord {
 		if (!this._root) {
@@ -89,65 +142,65 @@ export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescr
 		return this._root;
 	}
 
+	@t.char(128) protected _volumeSetIdentifier = new Uint8Array(128);
+
 	public get volumeSetIdentifier(): string {
-		return this._getString(190, 128);
+		return this._decode(this._volumeIdentifier);
 	}
+
+	@t.char(128) protected _publisherIdentifier = new Uint8Array(128);
 
 	public get publisherIdentifier(): string {
-		return this._getString(318, 128);
+		return this._decode(this._publisherIdentifier);
 	}
+
+	@t.char(128) protected _dataPreparerIdentifier = new Uint8Array(128);
 
 	public get dataPreparerIdentifier(): string {
-		return this._getString(446, 128);
+		return this._decode(this._dataPreparerIdentifier);
 	}
+
+	@t.char(128) protected _applicationIdentifier = new Uint8Array(128);
 
 	public get applicationIdentifier(): string {
-		return this._getString(574, 128);
+		return this._decode(this._applicationIdentifier);
 	}
+
+	@t.char(38) protected _copyrightFileIdentifier = new Uint8Array(38);
 
 	public get copyrightFileIdentifier(): string {
-		return this._getString(702, 38);
+		return this._decode(this._copyrightFileIdentifier);
 	}
+
+	@t.char(36) protected _abstractFileIdentifier = new Uint8Array(36);
 
 	public get abstractFileIdentifier(): string {
-		return this._getString(740, 36);
+		return this._decode(this._abstractFileIdentifier);
 	}
+
+	@t.char(37) protected _bibliographicFileIdentifier = new Uint8Array(37);
 
 	public get bibliographicFileIdentifier(): string {
-		return this._getString(776, 37);
+		return this._decode(this._bibliographicFileIdentifier);
 	}
 
-	public get volumeCreationDate(): Date {
-		return getDate(this._data.slice(813));
-	}
+	@member(LongFormDate) public volumeCreationDate = new LongFormDate();
 
-	public get volumeModificationDate(): Date {
-		return getDate(this._data.slice(830));
-	}
+	@member(LongFormDate) public volumeModificationDate = new LongFormDate();
 
-	public get volumeExpirationDate(): Date {
-		return getDate(this._data.slice(847));
-	}
+	@member(LongFormDate) public volumeExpirationDate = new LongFormDate();
 
-	public get volumeEffectiveDate(): Date {
-		return getDate(this._data.slice(864));
-	}
+	@member(LongFormDate) public volumeEffectiveDate = new LongFormDate();
 
-	public get fileStructureVersion(): number {
-		return this._data[881];
-	}
+	@t.uint8 public fileStructureVersion!: number;
 
-	public get applicationUsed(): Uint8Array {
-		return this._data.slice(883, 883 + 512);
-	}
+	@t.char(512) public applicationUsed = new Uint8Array(512);
 
-	public get reserved(): Uint8Array {
-		return this._data.slice(1395, 1395 + 653);
-	}
+	@t.char(653) public reserved = new Uint8Array(653);
 
-	public abstract get name(): string;
+	public abstract readonly name: string;
+
 	protected abstract _constructRootDirectoryRecord(data: Uint8Array): DirectoryRecord;
-	protected abstract _getString(idx: number, len: number): string;
 }
 
 export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescriptor {
@@ -158,14 +211,10 @@ export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescrip
 		}
 	}
 
-	public get name() {
-		return 'ISO9660';
-	}
+	public readonly name = 'ISO9660';
+
 	protected _constructRootDirectoryRecord(data: Uint8Array): DirectoryRecord {
 		return new ISODirectoryRecord(data, -1);
-	}
-	protected _getString(idx: number, len: number): string {
-		return this._getString(idx, len);
 	}
 }
 
@@ -175,26 +224,16 @@ export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeD
 		if (this.type !== VolumeDescriptorType.Supplementary) {
 			throw new ErrnoError(Errno.EIO, 'Invalid supplementary volume descriptor.');
 		}
-		const escapeSequence = this.escapeSequence;
-		const third = escapeSequence[2];
 		// Third character identifies what 'level' of the UCS specification to follow.
 		// We ignore it.
-		if (escapeSequence[0] !== 37 || escapeSequence[1] !== 47 || (third !== 64 && third !== 67 && third !== 69)) {
-			throw new ErrnoError(Errno.EIO, 'Unrecognized escape sequence for SupplementaryVolumeDescriptor: ' + escapeSequence.toString());
+		if (this.escapeSequence[0] !== 37 || this.escapeSequence[1] !== 47 || ![64, 67, 69].includes(this.escapeSequence[2])) {
+			throw new ErrnoError(Errno.EIO, 'Unrecognized escape sequence for SupplementaryVolumeDescriptor: ' + decode(this.escapeSequence));
 		}
 	}
 
-	public get name() {
-		return 'Joliet';
-	}
+	public readonly name = 'Joliet';
 
-	public get escapeSequence(): Uint8Array {
-		return this._data.slice(88, 120);
-	}
 	protected _constructRootDirectoryRecord(data: Uint8Array): DirectoryRecord {
 		return new JolietDirectoryRecord(data, -1);
-	}
-	protected _getString(index: number, length: number): string {
-		return getJolietString(this._data.slice(index, length));
 	}
 }

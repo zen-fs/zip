@@ -1,32 +1,68 @@
-import { decode } from '@zenfs/core/utils.js';
 import { deserialize, struct, types as t } from 'utilium';
 
-export function getJolietString(data: Uint8Array): string {
-	if (data.length === 1) {
-		// Special: Root, parent, current directory are still a single byte.
-		return String.fromCharCode(data[0]);
+@struct()
+export class LongFormDate {
+	@t.char(4) protected _year: string = '';
+	public get year(): number {
+		return parseInt(this._year);
 	}
-	// UTF16-BE, which isn't natively supported by Uint8Arrays.
-	// Length should be even, but pessimistically floor just in case.
-	const pairs = Math.floor(data.length / 2);
-	const chars = new Array(pairs);
-	for (let i = 0; i < pairs; i++) {
-		const pos = i << 1;
-		chars[i] = String.fromCharCode(data[pos + 1] | (data[pos] << 8));
+	public set year(value: number) {
+		this._year = value.toFixed();
 	}
-	return chars.join('');
-}
 
-export function getDate(data: Uint8Array): Date {
-	const year = parseInt(decode(data.slice(0, 4)));
-	const month = parseInt(decode(data.slice(4, 6)));
-	const day = parseInt(decode(data.slice(6, 8)));
-	const hour = parseInt(decode(data.slice(8, 10)));
-	const min = parseInt(decode(data.slice(10, 12)));
-	const sec = parseInt(decode(data.slice(12, 14)));
-	const hundrethsSec = parseInt(decode(data.slice(14, 16)));
-	// Last is a time-zone offset, but JavaScript dates don't support time zones well.
-	return new Date(year, month, day, hour, min, sec, hundrethsSec * 100);
+	@t.char(2) protected _month: string = '';
+	public get month(): number {
+		return parseInt(this._month);
+	}
+	public set month(value: number) {
+		this._month = value.toFixed();
+	}
+
+	@t.char(2) protected _day: string = '';
+	public get day(): number {
+		return parseInt(this._day);
+	}
+	public set day(value: number) {
+		this._day = value.toFixed();
+	}
+
+	@t.char(2) protected _hour: string = '';
+	public get hour(): number {
+		return parseInt(this._hour);
+	}
+	public set hour(value: number) {
+		this._hour = value.toFixed();
+	}
+
+	@t.char(2) protected _minute: string = '';
+	public get minute(): number {
+		return parseInt(this._minute);
+	}
+	public set minute(value: number) {
+		this._minute = value.toFixed();
+	}
+
+	@t.char(2) protected _second: string = '';
+	public get second(): number {
+		return parseInt(this._second);
+	}
+	public set second(value: number) {
+		this._second = value.toFixed();
+	}
+
+	@t.char(2) protected _centisecond: string = '';
+	public get centisecond(): number {
+		return parseInt(this._centisecond);
+	}
+	public set centisecond(value: number) {
+		this._centisecond = value.toFixed();
+	}
+
+	@t.uint8 public offsetFromGMT!: number;
+
+	public get date(): Date {
+		return new Date(this.year, this.month, this.day, this.hour, this.minute, this.second, this.centisecond * 10);
+	}
 }
 
 @struct()
