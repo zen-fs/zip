@@ -1,10 +1,10 @@
-import { DirectoryRecord, ISODirectoryRecord, JolietDirectoryRecord } from './DirectoryRecord.js';
+import { DirectoryRecord } from './DirectoryRecord.js';
 import { FileFlags } from './constants.js';
 import { CLEntry, REEntry } from './entries.js';
 
-export abstract class Directory<T extends DirectoryRecord> extends Map<string, T> {
+export class Directory extends Map<string, DirectoryRecord> {
 	public constructor(
-		protected record: T,
+		protected record: DirectoryRecord,
 		isoData: Uint8Array
 	) {
 		super();
@@ -28,7 +28,7 @@ export abstract class Directory<T extends DirectoryRecord> extends Map<string, T
 				i++;
 				continue;
 			}
-			const record = this._constructDirectoryRecord(isoData.slice(i));
+			const record = new DirectoryRecord(isoData.slice(i), this.record.rockRidgeOffset);
 			const fileName = record.fileName(isoData);
 			// Skip '.' and '..' entries.
 			if (fileName !== '\u0000' && fileName !== '\u0001' && (!record.hasRockRidge || !record.getSUEntries(isoData).filter(e => e instanceof REEntry).length)) {
@@ -41,21 +41,7 @@ export abstract class Directory<T extends DirectoryRecord> extends Map<string, T
 		}
 	}
 
-	public getDotEntry(isoData: Uint8Array): T {
-		return this._constructDirectoryRecord(isoData.slice(this.record.lba));
-	}
-
-	protected abstract _constructDirectoryRecord(data: Uint8Array): T;
-}
-
-export class ISODirectory extends Directory<ISODirectoryRecord> {
-	protected _constructDirectoryRecord(data: Uint8Array): ISODirectoryRecord {
-		return new ISODirectoryRecord(data, this.record.rockRidgeOffset);
-	}
-}
-
-export class JolietDirectory extends Directory<JolietDirectoryRecord> {
-	protected _constructDirectoryRecord(data: Uint8Array): JolietDirectoryRecord {
-		return new JolietDirectoryRecord(data, this.record.rockRidgeOffset);
+	public getDotEntry(isoData: Uint8Array): DirectoryRecord {
+		return new DirectoryRecord(isoData.slice(this.record.lba), this.record.rockRidgeOffset);
 	}
 }

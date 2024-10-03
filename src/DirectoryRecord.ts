@@ -1,17 +1,23 @@
-import { Errno, ErrnoError, decode } from '@zenfs/core';
+import { Errno, ErrnoError } from '@zenfs/core';
 import { deserialize, member, struct, types as t } from 'utilium';
-import { type Directory, ISODirectory, JolietDirectory } from './Directory.js';
+import { Directory } from './Directory.js';
 import { SLComponentFlags } from './SLComponentRecord.js';
 import { FileFlags, rockRidgeIdentifier } from './constants.js';
 import { CLEntry, EREntry, NMEntry, NMFlags, RREntry, SLEntry, SPEntry, SystemUseEntry, constructSystemUseEntries } from './entries.js';
 import { ShortFormDate } from './utils.js';
+import type { TextDecoder as TTextDecoder } from 'util';
 
 @struct()
-export abstract class DirectoryRecord {
+export class DirectoryRecord {
 	protected _view: DataView;
 	protected _suEntries?: SystemUseEntry[];
 	protected _file?: Uint8Array;
-	protected _dir?: Directory<DirectoryRecord>;
+	protected _dir?: Directory;
+
+	/**
+	 * @internal
+	 */
+	_kind?: string;
 
 	public constructor(
 		protected data: Uint8Array,
@@ -50,6 +56,7 @@ export abstract class DirectoryRecord {
 	@t.uint8 public extendedAttributeRecordLength!: number;
 
 	@t.uint32 protected _lba!: number;
+	@t.uint32 protected _lbaBE!: number;
 
 	public get lba(): number {
 		return this._lba * 2048;
@@ -63,6 +70,7 @@ export abstract class DirectoryRecord {
 	}
 
 	@t.uint32 public dataLength!: number;
+	@t.uint32 protected dataLengthBE!: number;
 
 	@member(ShortFormDate) protected date: ShortFormDate = new ShortFormDate();
 
@@ -77,12 +85,18 @@ export abstract class DirectoryRecord {
 	@t.uint8 public interleaveGapSize!: number;
 
 	@t.uint16 public volumeSequenceNumber!: number;
+	@t.uint16 protected volumeSequenceNumberBE!: number;
 
 	@t.uint8 protected identifierLength!: number;
 
+	/**
+	 * Variable length, which is not supported by Utilium at the moment
+	 */
+	@t.char(0) protected _identifier: string = '';
+
 	public get identifier(): string {
 		const stringData = this.data.slice(33, 33 + this.identifierLength);
-		return this._getString(stringData);
+		return this._decode(stringData);
 	}
 
 	public fileName(isoData: Uint8Array): string {
@@ -142,7 +156,7 @@ export abstract class DirectoryRecord {
 					} else if (flags & SLComponentFlags.ROOT) {
 						p += '/';
 					} else {
-						p += component.content(this._getString);
+						p += component.content(this._decode);
 						if (!(flags & SLComponentFlags.CONTINUE)) {
 							p += '/';
 						}
@@ -170,7 +184,7 @@ export abstract class DirectoryRecord {
 		return this._file;
 	}
 
-	public getDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
+	public getDirectory(isoData: Uint8Array): Directory {
 		if (!this.isDirectory(isoData)) {
 			throw new Error('Tried to get a Directory from a file.');
 		}
@@ -184,11 +198,22 @@ export abstract class DirectoryRecord {
 		}
 		return this._suEntries!;
 	}
+
 	protected getString(): string {
-		return this._getString(this.data);
+		return this._decode(this.data);
 	}
-	protected abstract _getString: (data: Uint8Array) => string;
-	protected abstract _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord>;
+
+	private _decoder?: TTextDecoder;
+
+	protected get _decode() {
+		this._decoder ||= new TextDecoder(this._kind == 'Joliet' ? 'utf-16be' : 'utf-8');
+		return (data: Uint8Array) => this._decoder!.decode(data).toLowerCase();
+	}
+
+	protected _constructDirectory(isoData: Uint8Array): Directory {
+		return new Directory(this, isoData);
+	}
+
 	protected _rockRidgeFilename(isoData: Uint8Array): string | null {
 		const nmEntries = <NMEntry[]>this.getSUEntries(isoData).filter(e => e instanceof NMEntry);
 		if (nmEntries.length === 0 || nmEntries[0].flags & (NMFlags.CURRENT | NMFlags.PARENT)) {
@@ -196,13 +221,14 @@ export abstract class DirectoryRecord {
 		}
 		let str = '';
 		for (const e of nmEntries) {
-			str += e.name(this._getString);
+			str += e.name(this._decode);
 			if (!(e.flags & NMFlags.CONTINUE)) {
 				break;
 			}
 		}
 		return str;
 	}
+
 	private _constructSUEntries(isoData: Uint8Array): void {
 		let i = 33 + this.data[32];
 		if (i % 2 === 1) {
@@ -212,6 +238,7 @@ export abstract class DirectoryRecord {
 		i += this._rockRidgeOffset;
 		this._suEntries = constructSystemUseEntries(this.data, i, BigInt(this.length), isoData);
 	}
+
 	/**
 	 * !!ONLY VALID ON FIRST ENTRY OF ROOT DIRECTORY!!
 	 * Returns -1 if rock ridge is not enabled. Otherwise, returns the offset
@@ -239,21 +266,4 @@ export abstract class DirectoryRecord {
 		this._rockRidgeOffset = -1;
 		return -1;
 	}
-}
-
-@struct()
-export class ISODirectoryRecord extends DirectoryRecord {
-	protected _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
-		return new ISODirectory(this, isoData);
-	}
-
-	protected _getString = decode;
-}
-
-@struct()
-export class JolietDirectoryRecord extends DirectoryRecord {
-	protected _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
-		return new JolietDirectory(this, isoData);
-	}
-	protected _getString = new TextDecoder('utf-16be').decode;
 }

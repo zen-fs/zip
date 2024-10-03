@@ -2,7 +2,7 @@ import { decode } from '@zenfs/core';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
 import type { TextDecoder as TTextDecoder } from 'util';
 import { deserialize, member, struct, types as t } from 'utilium';
-import { DirectoryRecord, ISODirectoryRecord, JolietDirectoryRecord } from './DirectoryRecord.js';
+import { DirectoryRecord } from './DirectoryRecord.js';
 import { LongFormDate } from './utils.js';
 
 export const enum VolumeDescriptorType {
@@ -30,12 +30,17 @@ export class VolumeDescriptor {
 
 @struct()
 export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescriptor {
+	public constructor(_data: Uint8Array) {
+		super(_data);
+		deserialize(this, _data);
+	}
+
 	protected _decoder?: TTextDecoder;
 
 	protected _decode(data: Uint8Array): string {
 		this._decoder ||= new TextDecoder(this.name == 'Joilet' ? 'utf-16be' : 'utf-8');
 
-		return this._decoder.decode(data);
+		return this._decoder.decode(data).toLowerCase();
 	}
 
 	/**
@@ -136,9 +141,10 @@ export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescr
 
 	public rootDirectoryEntry(isoData: Uint8Array): DirectoryRecord {
 		if (!this._root) {
-			this._root = this._constructRootDirectoryRecord(this._data.slice(156));
+			this._root = new DirectoryRecord(this._data.slice(156), -1);
 			this._root.rootCheckForRockRidge(isoData);
 		}
+		this._root._kind = this.name;
 		return this._root;
 	}
 
@@ -198,29 +204,42 @@ export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescr
 
 	@t.char(653) public reserved = new Uint8Array(653);
 
-	public abstract readonly name: string;
+	public toString(): string {
+		return `${this.name} CD-ROM
+				System id: ${this.systemIdentifier}
+				Volume id: ${this.volumeIdentifier}
+				Volume set id: ${this.volumeSetIdentifier}
+				Publisher id: ${this.publisherIdentifier}
+				Data preparer id: ${this.dataPreparerIdentifier}
+				Application id: ${this.applicationIdentifier}
+				Copyright file id: ${this.copyrightFileIdentifier}
+				Abstract file id: ${this.abstractFileIdentifier}
+				Bibliographic file id: ${this.bibliographicFileIdentifier}
+				Volume set size: ${this.volumeSetSize}
+				Volume sequence number: ${this.volumeSequenceNumber}
+				Logical block size: ${this.logicalBlockSize}
+				Volume size: ${this.volumeSpaceSize}`.replaceAll('\t', '');
+	}
 
-	protected abstract _constructRootDirectoryRecord(data: Uint8Array): DirectoryRecord;
+	public abstract readonly name: string;
 }
 
 @struct()
 export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescriptor {
+	public readonly name = 'ISO9660';
+
 	public constructor(data: Uint8Array) {
 		super(data);
 		if (this.type !== VolumeDescriptorType.Primary) {
 			throw new ErrnoError(Errno.EIO, 'Invalid primary volume descriptor.');
 		}
 	}
-
-	public readonly name = 'ISO9660';
-
-	protected _constructRootDirectoryRecord(data: Uint8Array): DirectoryRecord {
-		return new ISODirectoryRecord(data, -1);
-	}
 }
 
 @struct()
 export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescriptor {
+	public readonly name = 'Joliet';
+
 	public constructor(data: Uint8Array) {
 		super(data);
 		if (this.type !== VolumeDescriptorType.Supplementary) {
@@ -231,11 +250,5 @@ export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeD
 		if (this.escapeSequence[0] !== 37 || this.escapeSequence[1] !== 47 || ![64, 67, 69].includes(this.escapeSequence[2])) {
 			throw new ErrnoError(Errno.EIO, 'Unrecognized escape sequence for SupplementaryVolumeDescriptor: ' + decode(this.escapeSequence));
 		}
-	}
-
-	public readonly name = 'Joliet';
-
-	protected _constructRootDirectoryRecord(data: Uint8Array): DirectoryRecord {
-		return new JolietDirectoryRecord(data, -1);
 	}
 }
