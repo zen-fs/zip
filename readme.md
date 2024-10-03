@@ -32,7 +32,7 @@ const res = await fetch('http://example.com/image.iso');
 
 await configure({
 	mounts: {
-		'/mnt/iso': { backend: Iso, data: await res.arrayBuffer() },
+		'/mnt/iso': { backend: Iso, data: new Uint8Array(await res.arrayBuffer()) },
 	},
 });
 
