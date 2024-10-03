@@ -1,23 +1,27 @@
+import { decode, Errno, ErrnoError } from '@zenfs/core';
+import { deserialize, member, struct, types as t } from 'utilium';
 import { type Directory, ISODirectory, JolietDirectory } from './Directory.js';
 import { SLComponentFlags } from './SLComponentRecord.js';
 import { FileFlags, rockRidgeIdentifier } from './constants.js';
 import { CLEntry, EREntry, NMEntry, NMFlags, RREntry, SLEntry, SPEntry, SystemUseEntry, constructSystemUseEntries } from './entries.js';
-import { TGetString, getASCIIString, getJolietString, getShortFormDate } from './utils.js';
+import { ShortFormDate, getJolietString } from './utils.js';
 
+@struct()
 export abstract class DirectoryRecord {
 	protected _view: DataView;
-	// Offset at which system use entries begin. Set to -1 if not enabled.
-	protected _rockRidgeOffset: number;
 	protected _suEntries?: SystemUseEntry[];
 	protected _file?: Uint8Array;
 	protected _dir?: Directory<DirectoryRecord>;
 
 	public constructor(
 		protected data: Uint8Array,
-		rockRidgeOffset: number
+		/**
+		 * Offset at which system use entries begin. Set to -1 if not enabled.
+		 */
+		protected _rockRidgeOffset: number
 	) {
+		deserialize(this, data);
 		this._view = new DataView(data.buffer);
-		this._rockRidgeOffset = rockRidgeOffset;
 	}
 
 	public get hasRockRidge(): boolean {
@@ -27,6 +31,7 @@ export abstract class DirectoryRecord {
 	public get rockRidgeOffset(): number {
 		return this._rockRidgeOffset;
 	}
+
 	/**
 	 * !!ONLY VALID ON ROOT NODE!!
 	 * Checks if Rock Ridge is enabled, and sets the offset.
@@ -40,44 +45,44 @@ export abstract class DirectoryRecord {
 		}
 	}
 
-	public get length(): number {
-		return this.data[0];
-	}
+	@t.uint8 public length!: number;
 
-	public get extendedAttributeRecordLength(): number {
-		return this.data[1];
-	}
+	@t.uint8 public extendedAttributeRecordLength!: number;
+
+	@t.uint32 protected _lba!: number;
 
 	public get lba(): number {
-		return this._view.getUint32(2, true) * 2048;
+		return this._lba * 2048;
 	}
 
-	public get dataLength(): number {
-		return this._view.getUint32(10, true);
+	public set lba(value: number) {
+		if (!Number.isInteger(value / 2048)) {
+			throw new ErrnoError(Errno.EINVAL, 'Invalid LBA value');
+		}
+		this._lba = value / 2048;
 	}
+
+	@t.uint32 public dataLength!: number;
+
+	@member(ShortFormDate) protected date: ShortFormDate = new ShortFormDate();
 
 	public get recordingDate(): Date {
-		return getShortFormDate(this.data, 18);
+		return this.date.date;
 	}
 
-	public get fileFlags(): number {
-		return this.data[25];
-	}
+	@t.uint8 public fileFlags!: number;
 
-	public get fileUnitSize(): number {
-		return this.data[26];
-	}
+	@t.uint8 public fileUnitSize!: number;
 
-	public get interleaveGapSize(): number {
-		return this.data[27];
-	}
+	@t.uint8 public interleaveGapSize!: number;
 
-	public get volumeSequenceNumber(): number {
-		return this._view.getUint16(28, true);
-	}
+	@t.uint16 public volumeSequenceNumber!: number;
+
+	@t.uint8 protected identifierLength!: number;
 
 	public get identifier(): string {
-		return this._getString(this.data, 33, this.data[32]);
+		const stringData = this.data.slice(33, 33 + this.identifierLength);
+		return this._getString(stringData);
 	}
 
 	public fileName(isoData: Uint8Array): string {
@@ -179,10 +184,10 @@ export abstract class DirectoryRecord {
 		}
 		return this._suEntries!;
 	}
-	protected getString(i: number, len: number): string {
-		return this._getString(this.data, i, len);
+	protected getString(): string {
+		return this._getString(this.data);
 	}
-	protected abstract _getString: TGetString;
+	protected abstract _getString: (data: Uint8Array) => string;
 	protected abstract _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord>;
 	protected _rockRidgeFilename(isoData: Uint8Array): string | null {
 		const nmEntries = <NMEntry[]>this.getSUEntries(isoData).filter(e => e instanceof NMEntry);
@@ -237,25 +242,16 @@ export abstract class DirectoryRecord {
 }
 
 export class ISODirectoryRecord extends DirectoryRecord {
-	public constructor(data: Uint8Array, rockRidgeOffset: number) {
-		super(data, rockRidgeOffset);
-	}
 	protected _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
 		return new ISODirectory(this, isoData);
 	}
-	protected get _getString(): TGetString {
-		return getASCIIString;
-	}
+
+	protected _getString = decode;
 }
 
 export class JolietDirectoryRecord extends DirectoryRecord {
-	public constructor(data: Uint8Array, rockRidgeOffset: number) {
-		super(data, rockRidgeOffset);
-	}
 	protected _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
 		return new JolietDirectory(this, isoData);
 	}
-	protected get _getString(): TGetString {
-		return getJolietString;
-	}
+	protected _getString = getJolietString;
 }

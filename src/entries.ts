@@ -1,6 +1,7 @@
 import { deserialize, struct, types as t, type Tuple } from 'utilium';
 import { SLComponentRecord } from './SLComponentRecord.js';
-import { TGetString, getASCIIString, getDate, getShortFormDate } from './utils.js';
+import { getDate, getShortFormDate } from './utils.js';
+import { decode } from '@zenfs/core';
 
 export const enum EntrySignature {
 	CE = 0x4345,
@@ -39,7 +40,7 @@ class SystemUseEntry {
 	@t.uint16 public signature!: EntrySignature;
 
 	public get signatureString(): string {
-		return getASCIIString(this.data, 0, 2);
+		return decode(this.data.slice(0, 2));
 	}
 
 	@t.uint8 public length!: number;
@@ -110,15 +111,16 @@ export class EREntry extends SystemUseEntry {
 	@t.uint8 public extensionVersion!: number;
 
 	public get extensionIdentifier(): string {
-		return getASCIIString(this.data, 8, this.idLength);
+		return decode(this.data.slice(8, 8 + this.idLength));
 	}
 
 	public get extensionDescriptor(): string {
-		return getASCIIString(this.data, 8 + this.idLength, this.descriptorLength);
+		return decode(this.data.slice(8 + this.idLength, 8 + this.idLength + this.descriptorLength));
 	}
 
 	public get extensionSource(): string {
-		return getASCIIString(this.data, 8 + this.idLength + this.descriptorLength, this.sourceLength);
+		const start = 8 + this.idLength + this.descriptorLength;
+		return decode(this.data.slice(start, start + this.sourceLength));
 	}
 }
 
@@ -260,8 +262,8 @@ export const enum NMFlags {
 export class NMEntry extends SystemUseEntry {
 	@t.uint8 public flags!: NMFlags;
 
-	public name(getString: TGetString): string {
-		return getString(this.data, 5, this.length - 5);
+	public name(getString: (data: Uint8Array) => string): string {
+		return getString(this.data.slice(5, this.length));
 	}
 }
 
@@ -309,7 +311,7 @@ export class TFEntry extends SystemUseEntry {
 			return;
 		}
 
-		return this._longFormDates() ? getDate(this.data, 5) : getShortFormDate(this.data, 5);
+		return this._longFormDates() ? getDate(this.data.slice(5)) : getShortFormDate(this.data.slice(5));
 	}
 
 	public get modify(): Date | undefined {
@@ -317,7 +319,7 @@ export class TFEntry extends SystemUseEntry {
 			return;
 		}
 		const previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
+		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
 	}
 
 	public get access(): Date | undefined {
@@ -326,7 +328,7 @@ export class TFEntry extends SystemUseEntry {
 		}
 		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
 		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
+		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
 	}
 
 	public get backup(): Date | undefined {
@@ -336,7 +338,7 @@ export class TFEntry extends SystemUseEntry {
 		let previousDates = this.flags & TFFlags.CREATION ? 1 : 0;
 		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
 		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
+		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
 	}
 
 	public get expiration(): Date | undefined {
@@ -347,7 +349,7 @@ export class TFEntry extends SystemUseEntry {
 		previousDates += this.flags & TFFlags.MODIFY ? 1 : 0;
 		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
 		previousDates += this.flags & TFFlags.BACKUP ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
+		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
 	}
 
 	public get effective(): Date | undefined {
@@ -359,7 +361,7 @@ export class TFEntry extends SystemUseEntry {
 		previousDates += this.flags & TFFlags.ACCESS ? 1 : 0;
 		previousDates += this.flags & TFFlags.BACKUP ? 1 : 0;
 		previousDates += this.flags & TFFlags.EXPIRATION ? 1 : 0;
-		return this._longFormDates() ? getDate(this.data, 5 + previousDates * 17) : getShortFormDate(this.data, 5 + previousDates * 7);
+		return this._longFormDates() ? getDate(this.data.slice(5 + previousDates * 17)) : getShortFormDate(this.data.slice(5 + previousDates * 7));
 	}
 
 	private _longFormDates(): boolean {

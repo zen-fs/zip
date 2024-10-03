@@ -1,6 +1,7 @@
 import { ErrnoError, Errno } from '@zenfs/core/error.js';
 import { DirectoryRecord, ISODirectoryRecord, JolietDirectoryRecord } from './DirectoryRecord.js';
-import { getASCIIString, getDate, getJolietString } from './utils.js';
+import { getDate, getJolietString } from './utils.js';
+import { decode } from '@zenfs/core';
 
 export const enum VolumeDescriptorType {
 	BootRecord = 0,
@@ -21,7 +22,7 @@ export class VolumeDescriptor {
 	}
 
 	public get standardIdentifier(): string {
-		return getASCIIString(this._data, 1, 5);
+		return decode(this._data.slice(1, 5));
 	}
 
 	public get version(): number {
@@ -117,19 +118,19 @@ export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescr
 	}
 
 	public get volumeCreationDate(): Date {
-		return getDate(this._data, 813);
+		return getDate(this._data.slice(813));
 	}
 
 	public get volumeModificationDate(): Date {
-		return getDate(this._data, 830);
+		return getDate(this._data.slice(830));
 	}
 
 	public get volumeExpirationDate(): Date {
-		return getDate(this._data, 847);
+		return getDate(this._data.slice(847));
 	}
 
 	public get volumeEffectiveDate(): Date {
-		return getDate(this._data, 864);
+		return getDate(this._data.slice(864));
 	}
 
 	public get fileStructureVersion(): number {
@@ -193,7 +194,7 @@ export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeD
 	protected _constructRootDirectoryRecord(data: Uint8Array): DirectoryRecord {
 		return new JolietDirectoryRecord(data, -1);
 	}
-	protected _getString(idx: number, len: number): string {
-		return getJolietString(this._data, idx, len);
+	protected _getString(index: number, length: number): string {
+		return getJolietString(this._data.slice(index, length));
 	}
 }

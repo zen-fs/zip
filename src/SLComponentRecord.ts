@@ -1,4 +1,4 @@
-import { TGetString } from './utils.js';
+import { struct, types as t } from 'utilium';
 
 export const enum SLComponentFlags {
 	CONTINUE = 1,
@@ -7,22 +7,19 @@ export const enum SLComponentFlags {
 	ROOT = 1 << 3,
 }
 
+@struct()
 export class SLComponentRecord {
 	public constructor(protected data: Uint8Array) {}
 
-	public get flags(): SLComponentFlags {
-		return this.data[0];
-	}
+	@t.uint8 public flags!: SLComponentFlags;
+
+	@t.uint8 public componentLength!: number;
 
 	public get length(): number {
 		return 2 + this.componentLength;
 	}
 
-	public get componentLength(): number {
-		return this.data[1];
-	}
-
-	public content(getString: TGetString): string {
-		return getString(this.data, 2, this.componentLength);
+	public content(getString: (data: Uint8Array) => string): string {
+		return getString(this.data.slice(2, 2 + this.componentLength));
 	}
 }
