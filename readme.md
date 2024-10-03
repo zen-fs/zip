@@ -45,5 +45,4 @@ console.log(contents);
 This implementation uses information on the ISO 9660 / ECMA 119 format/standard from:
 
 -   https://wiki.osdev.org/ISO_9660
--   https://github.com/libcdio/libcdio/blob/master/include/cdio/iso9660.h
 -   https://www.ecma-international.org/wp-content/uploads/ECMA-119_4th_edition_june_2019.pdf
