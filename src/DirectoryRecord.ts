@@ -3,7 +3,7 @@ import { deserialize, member, struct, types as t } from 'utilium';
 import { Directory } from './Directory.js';
 import { SLComponentFlags } from './SLComponentRecord.js';
 import { FileFlags, rockRidgeIdentifier } from './constants.js';
-import type { SystemUseEntry} from './entries.js';
+import type { SystemUseEntry } from './entries.js';
 import { CLEntry, EREntry, NMEntry, NMFlags, RREntry, SLEntry, SPEntry, constructSystemUseEntries } from './entries.js';
 import { ShortFormDate } from './utils.js';
 import type { TextDecoder as TTextDecoder } from 'util';
