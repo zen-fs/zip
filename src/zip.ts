@@ -34,9 +34,8 @@ export enum AttributeCompat {
 /**
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.7
  */
-export
 @struct()
-class LocalFileHeader {
+export class LocalFileHeader {
 	public constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature !== 0x04034b50) {
@@ -140,9 +139,8 @@ class LocalFileHeader {
  * Archive extra data record
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.11
  */
-export
 @struct()
-class ExtraDataRecord {
+export class ExtraDataRecord {
 	@t.uint32 public signature!: number;
 
 	@t.uint32 public length!: number;
@@ -174,9 +172,8 @@ export const sizeof_FileEntry = 46;
  * This is a file metadata entry inside the "central directory".
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.12
  */
-export
 @struct()
-class FileEntry {
+export class FileEntry {
 	constructor(
 		protected zipData: ArrayBufferLike,
 		protected _data: ArrayBufferLike
@@ -397,9 +394,8 @@ class FileEntry {
  * Digital signature
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.13
  */
-export
 @struct()
-class DigitalSignature {
+export class DigitalSignature {
 	constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x05054b50) {
@@ -422,9 +418,8 @@ class DigitalSignature {
  * Internally, ZIP files have only a single directory: the "central directory".
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.16
  */
-export
 @struct()
-class Header {
+export class Header {
 	public constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x06054b50) {
