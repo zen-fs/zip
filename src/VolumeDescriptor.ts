@@ -203,11 +203,12 @@ export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescr
 	protected abstract _constructRootDirectoryRecord(data: Uint8Array): DirectoryRecord;
 }
 
+@struct()
 export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescriptor {
 	public constructor(data: Uint8Array) {
 		super(data);
 		if (this.type !== VolumeDescriptorType.Primary) {
-			throw new ErrnoError(Errno.EIO, `Invalid primary volume descriptor.`);
+			throw new ErrnoError(Errno.EIO, 'Invalid primary volume descriptor.');
 		}
 	}
 
@@ -218,6 +219,7 @@ export class PrimaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescrip
 	}
 }
 
+@struct()
 export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeDescriptor {
 	public constructor(data: Uint8Array) {
 		super(data);
