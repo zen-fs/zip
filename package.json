@@ -37,7 +37,7 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"lint": "eslint src",
-		"test": "tsx --test tests/zip.test.ts",
+		"test": "tsx --test --experimental-test-coverage",
 		"build": "npx build --package=@zenfs/core --globalName ZenFS_ZIP --entry src/index.ts",
 		"build:docs": "typedoc --out docs --name 'ZenFS Zip' src/index.ts",
 		"prepublishOnly": "npm run build"
