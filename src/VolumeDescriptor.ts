@@ -21,7 +21,7 @@ export class VolumeDescriptor {
 
 	@t.uint8 public type!: VolumeDescriptorType;
 
-	@t.char(4) public standardIdentifier: string = '';
+	@t.char(5) public standardIdentifier: string = '';
 
 	@t.uint8 public version!: number;
 

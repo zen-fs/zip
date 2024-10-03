@@ -52,7 +52,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		let vdTerminatorFound = false;
 		let i = 16 * 2048;
 		const candidateVDs = new Array<PrimaryOrSupplementaryVolumeDescriptor>();
-		while (!vdTerminatorFound) {
+		while (!vdTerminatorFound && i < data.length) {
 			const slice = this.data.slice(i);
 			switch (slice[0]) {
 				case VolumeDescriptorType.Primary:
@@ -222,8 +222,8 @@ export const Iso = {
 			required: true,
 			description: 'The ISO file in a buffer',
 			validator(arg: unknown) {
-				if (!(arg instanceof ArrayBuffer)) {
-					throw new TypeError('data is not an ArrayBuffer');
+				if (!(arg instanceof Uint8Array)) {
+					throw new TypeError('data is not an Uint8Array');
 				}
 			},
 		},

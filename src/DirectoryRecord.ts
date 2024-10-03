@@ -241,6 +241,7 @@ export abstract class DirectoryRecord {
 	}
 }
 
+@struct()
 export class ISODirectoryRecord extends DirectoryRecord {
 	protected _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
 		return new ISODirectory(this, isoData);
@@ -249,6 +250,7 @@ export class ISODirectoryRecord extends DirectoryRecord {
 	protected _getString = decode;
 }
 
+@struct()
 export class JolietDirectoryRecord extends DirectoryRecord {
 	protected _constructDirectory(isoData: Uint8Array): Directory<DirectoryRecord> {
 		return new JolietDirectory(this, isoData);

@@ -51,6 +51,7 @@ class SystemUseEntry {
 /**
  * Continuation entry.
  */
+@struct()
 export class CEEntry extends SystemUseEntry {
 	protected _entries: SystemUseEntry[] = [];
 
@@ -78,11 +79,13 @@ export class CEEntry extends SystemUseEntry {
 /**
  * Padding entry.
  */
+@struct()
 export class PDEntry extends SystemUseEntry {}
 
 /**
  * Identifies that SUSP is in-use.
  */
+@struct()
 export class SPEntry extends SystemUseEntry {
 	@t.uint8(2) public magic!: Tuple<number, 2>;
 
@@ -96,11 +99,13 @@ export class SPEntry extends SystemUseEntry {
 /**
  * Identifies the end of the SUSP entries.
  */
+@struct()
 export class STEntry extends SystemUseEntry {}
 
 /**
  * Specifies system-specific extensions to SUSP.
  */
+@struct()
 export class EREntry extends SystemUseEntry {
 	@t.uint8 public idLength!: number;
 
@@ -124,6 +129,7 @@ export class EREntry extends SystemUseEntry {
 	}
 }
 
+@struct()
 export class ESEntry extends SystemUseEntry {
 	@t.uint8 public extensionSequence!: number;
 }
@@ -132,12 +138,13 @@ export class ESEntry extends SystemUseEntry {
  * RockRidge: Marks that RockRidge is in use
  * @deprecated
  */
-
+@struct()
 export class RREntry extends SystemUseEntry {}
 
 /**
  * RockRidge: Records POSIX file attributes.
  */
+@struct()
 export class PXEntry extends SystemUseEntry {
 	@t.uint64 public mode!: bigint;
 
@@ -153,6 +160,7 @@ export class PXEntry extends SystemUseEntry {
 /**
  * RockRidge: Records POSIX device number.
  */
+@struct()
 export class PNEntry extends SystemUseEntry {
 	@t.uint64 public dev_high!: bigint;
 
@@ -162,7 +170,7 @@ export class PNEntry extends SystemUseEntry {
 /**
  * RockRidge: Records symbolic link
  */
-
+@struct()
 export class SLEntry extends SystemUseEntry {
 	@t.uint8 public flags!: number;
 
@@ -182,8 +190,7 @@ export class SLEntry extends SystemUseEntry {
 	}
 }
 
-export function constructSystemUseEntry(_data: Uint8Array, i: number): SystemUseEntry {
-	const data = _data.slice(i);
+export function constructSystemUseEntry(data: Uint8Array): SystemUseEntry {
 	const sue = new SystemUseEntry(data);
 	switch (sue.signature) {
 		case EntrySignature.CE:
@@ -223,14 +230,14 @@ export function constructSystemUseEntry(_data: Uint8Array, i: number): SystemUse
 	}
 }
 
-export function constructSystemUseEntries(data: Uint8Array, i: number, len: bigint, isoData: Uint8Array): SystemUseEntry[] {
+export function constructSystemUseEntries(data: Uint8Array, i: number, length: bigint, isoData: Uint8Array): SystemUseEntry[] {
 	// If the remaining allocated space following the last recorded System Use Entry in a System
 	// Use field or Continuation Area is less than four bytes long, it cannot contain a System
 	// Use Entry and shall be ignored
-	len -= 4n;
+	length -= 4n;
 	const entries: SystemUseEntry[] = [];
-	while (i < len) {
-		const entry = constructSystemUseEntry(data, i);
+	while (i < length) {
+		const entry = constructSystemUseEntry(data.slice(i));
 		const length = entry.length;
 		if (!length) {
 			// Invalid SU section; prevent infinite loop.
@@ -241,11 +248,8 @@ export function constructSystemUseEntries(data: Uint8Array, i: number, len: bigi
 			// ST indicates the end of entries.
 			break;
 		}
-		if (entry instanceof CEEntry) {
-			entries.push(...entry.entries(isoData));
-		} else {
-			entries.push(entry);
-		}
+
+		entries.push(...(entry instanceof CEEntry ? entry.entries(isoData) : [entry]));
 	}
 	return entries;
 }
@@ -259,7 +263,7 @@ export const enum NMFlags {
 /**
  * RockRidge: Records alternate file name
  */
-
+@struct()
 export class NMEntry extends SystemUseEntry {
 	@t.uint8 public flags!: NMFlags;
 
@@ -271,7 +275,7 @@ export class NMEntry extends SystemUseEntry {
 /**
  * RockRidge: Records child link
  */
-
+@struct()
 export class CLEntry extends SystemUseEntry {
 	@t.uint32 public childDirectoryLba!: number;
 }
@@ -279,7 +283,7 @@ export class CLEntry extends SystemUseEntry {
 /**
  * RockRidge: Records parent link.
  */
-
+@struct()
 export class PLEntry extends SystemUseEntry {
 	@t.uint32 public parentDirectoryLba!: number;
 }
@@ -287,7 +291,7 @@ export class PLEntry extends SystemUseEntry {
 /**
  * RockRidge: Records relocated directory.
  */
-
+@struct()
 export class REEntry extends SystemUseEntry {}
 
 export const enum TFFlag {
@@ -304,6 +308,7 @@ export const enum TFFlag {
 /**
  * RockRidge: Records file timestamps
  */
+@struct()
 export class TFEntry extends SystemUseEntry {
 	@t.uint8 public flags!: number;
 
