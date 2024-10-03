@@ -1,6 +1,6 @@
 {
 	"name": "@zenfs/iso",
-	"version": "0.2.4",
+	"version": "0.3.0",
 	"description": "Iso backend for ZenFS",
 	"main": "dist/index.js",
 	"types": "src/index.ts",
