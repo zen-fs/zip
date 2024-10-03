@@ -3,9 +3,6 @@ import { FileFlags } from './constants.js';
 import { CLEntry, REEntry } from './entries.js';
 
 export abstract class Directory<T extends DirectoryRecord> extends Map<string, T> {
-	//public readonly files: string[] = [];
-	//private fileMap = new Map<string, T>();
-
 	public constructor(
 		protected record: T,
 		isoData: Uint8Array
@@ -31,16 +28,16 @@ export abstract class Directory<T extends DirectoryRecord> extends Map<string, T
 				i++;
 				continue;
 			}
-			const r = this._constructDirectoryRecord(isoData.slice(i));
-			const fname = r.fileName(isoData);
+			const record = this._constructDirectoryRecord(isoData.slice(i));
+			const fileName = record.fileName(isoData);
 			// Skip '.' and '..' entries.
-			if (fname !== '\u0000' && fname !== '\u0001' && (!r.hasRockRidge || !r.getSUEntries(isoData).filter(e => e instanceof REEntry).length)) {
-				this.set(fname, r);
+			if (fileName !== '\u0000' && fileName !== '\u0001' && (!record.hasRockRidge || !record.getSUEntries(isoData).filter(e => e instanceof REEntry).length)) {
+				this.set(fileName, record);
 			} else if (limit === Infinity) {
 				// First entry contains needed data.
-				limit = i + r.dataLength;
+				limit = i + record.dataLength;
 			}
-			i += r.length;
+			i += record.length;
 		}
 	}
 
