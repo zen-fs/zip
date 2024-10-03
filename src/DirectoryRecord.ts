@@ -3,7 +3,8 @@ import { deserialize, member, struct, types as t } from 'utilium';
 import { Directory } from './Directory.js';
 import { SLComponentFlags } from './SLComponentRecord.js';
 import { FileFlags, rockRidgeIdentifier } from './constants.js';
-import { CLEntry, EREntry, NMEntry, NMFlags, RREntry, SLEntry, SPEntry, SystemUseEntry, constructSystemUseEntries } from './entries.js';
+import type { SystemUseEntry} from './entries.js';
+import { CLEntry, EREntry, NMEntry, NMFlags, RREntry, SLEntry, SPEntry, constructSystemUseEntries } from './entries.js';
 import { ShortFormDate } from './utils.js';
 import type { TextDecoder as TTextDecoder } from 'util';
 
@@ -215,7 +216,7 @@ export class DirectoryRecord {
 	}
 
 	protected _rockRidgeFilename(isoData: Uint8Array): string | null {
-		const nmEntries = <NMEntry[]>this.getSUEntries(isoData).filter(e => e instanceof NMEntry);
+		const nmEntries = this.getSUEntries(isoData).filter(e => e instanceof NMEntry) as NMEntry[];
 		if (nmEntries.length === 0 || nmEntries[0].flags & (NMFlags.CURRENT | NMFlags.PARENT)) {
 			return null;
 		}
