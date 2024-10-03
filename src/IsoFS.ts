@@ -135,7 +135,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		}
 
 		if (record.isDirectory(this.data)) {
-			return record.getDirectory(this.data).fileList.slice(0);
+			return Array.from(record.getDirectory(this.data).keys());
 		}
 
 		throw ErrnoError.With('ENOTDIR', path, 'readdir');
@@ -146,13 +146,13 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 		if (path === '/') {
 			return this._root;
 		}
-		const components = path.split('/').slice(1);
-		let dir = this._root;
-		for (const component of components) {
+		const parts = path.split('/').slice(1);
+		let dir: DirectoryRecord | undefined = this._root;
+		for (const part of parts) {
 			if (!dir.isDirectory(this.data)) {
 				return;
 			}
-			dir = dir.getDirectory(this.data).getRecord(component);
+			dir = dir.getDirectory(this.data).get(part);
 			if (!dir) {
 				return;
 			}
