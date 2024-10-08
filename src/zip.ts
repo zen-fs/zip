@@ -130,6 +130,7 @@ export class LocalFileHeader {
 	public get size(): number {
 		return 30 + this.nameLength + this.extraLength;
 	}
+
 	public get useUTF8(): boolean {
 		return !!(this.flags & (1 << 11));
 	}
@@ -145,7 +146,7 @@ export class ExtraDataRecord {
 
 	@t.uint32 public length!: number;
 
-	constructor(public readonly data: ArrayBufferLike) {
+	public constructor(public readonly data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x08064b50) {
 			throw new ErrnoError(Errno.EINVAL, 'Invalid archive extra data record signature: ' + this.signature);
@@ -174,7 +175,7 @@ export const sizeof_FileEntry = 46;
  */
 @struct()
 export class FileEntry {
-	constructor(
+	public constructor(
 		protected zipData: ArrayBufferLike,
 		protected _data: ArrayBufferLike
 	) {
@@ -219,6 +220,7 @@ export class FileEntry {
 	public get useUTF8(): boolean {
 		return !!(this.flag & (1 << 11));
 	}
+
 	public get isEncrypted(): boolean {
 		return !!(this.flag & 1);
 	}
@@ -396,7 +398,7 @@ export class FileEntry {
  */
 @struct()
 export class DigitalSignature {
-	constructor(protected data: ArrayBufferLike) {
+	public constructor(protected data: ArrayBufferLike) {
 		deserialize(this, data);
 		if (this.signature != 0x05054b50) {
 			throw new ErrnoError(Errno.EINVAL, 'Invalid digital signature signature: ' + this.signature);
