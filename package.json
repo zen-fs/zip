@@ -11,7 +11,7 @@
 	],
 	"type": "module",
 	"homepage": "https://github.com/zen-fs/iso",
-	"author": "James P. <jp@drvortex.dev>",
+	"author": "James Prevett <jp@jamespre.dev>",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
