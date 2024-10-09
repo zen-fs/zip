@@ -59,7 +59,7 @@ export interface ZipOptions {
  */
 export class ZipFS extends Readonly(Sync(FileSystem)) {
 	protected files: Map<string, FileEntry> = new Map();
-	protected directories: Map<string, string[]> = new Map();
+	protected directories: Map<string, Set<string>> = new Map();
 
 	protected _time = Date.now();
 
@@ -134,21 +134,23 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			const { dir, base } = parse(entry);
 
 			if (!this.directories.has(dir)) {
-				this.directories.set(dir, []);
+				this.directories.set(dir, new Set());
 			}
 
-			this.directories.get(dir)!.push(base);
+			this.directories.get(dir)!.add(base);
 		}
 
 		// Add subdirectories to their parent's entries
 		for (const entry of this.directories.keys()) {
 			const { dir, base } = parse(entry);
 
+			if (base == '') continue;
+
 			if (!this.directories.has(dir)) {
-				this.directories.set(dir, []);
+				this.directories.set(dir, new Set());
 			}
 
-			this.directories.get(dir)!.push(base);
+			this.directories.get(dir)!.add(base);
 		}
 	}
 
@@ -211,7 +213,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			throw ErrnoError.With('ENODATA', path, 'readdir');
 		}
 
-		return entries;
+		return Array.from(entries);
 	}
 }
 
