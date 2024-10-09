@@ -129,8 +129,19 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			ptr += cd.size;
 		}
 
-		// Parse directories
+		// Parse directory entries
 		for (const entry of this.files.keys()) {
+			const { dir, base } = parse(entry);
+
+			if (!this.directories.has(dir)) {
+				this.directories.set(dir, []);
+			}
+
+			this.directories.get(dir)!.push(base);
+		}
+
+		// Add subdirectories to their parent's entries
+		for (const entry of this.directories.keys()) {
 			const { dir, base } = parse(entry);
 
 			if (!this.directories.has(dir)) {
