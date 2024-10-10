@@ -217,7 +217,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 	}
 }
 
-export const Zip = {
+export const _Zip = {
 	name: 'Zip',
 
 	options: {
@@ -246,3 +246,7 @@ export const Zip = {
 		return new ZipFS(options.name ?? '', options.data);
 	},
 } satisfies Backend<ZipFS, ZipOptions>;
+type _Zip = typeof _Zip;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface Zip extends _Zip {}
+export const Zip: Zip = _Zip;
