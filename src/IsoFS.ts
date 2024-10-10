@@ -210,7 +210,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 	}
 }
 
-export const Iso = {
+export const _Iso = {
 	name: 'Iso',
 
 	isAvailable(): boolean {
@@ -234,3 +234,7 @@ export const Iso = {
 		return new IsoFS(options);
 	},
 } as const satisfies Backend<IsoFS, IsoOptions>;
+type _Iso = typeof _Iso;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface Iso extends _Iso {}
+export const Iso: Iso = _Iso;
