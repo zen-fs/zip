@@ -11,7 +11,7 @@
 	],
 	"type": "module",
 	"homepage": "https://github.com/zen-fs/zip",
-	"author": "James Prevett <jp@jamespre.dev>",
+	"author": "James Prevett <jp@jamespre.dev> (https://jamespre.dev)",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
