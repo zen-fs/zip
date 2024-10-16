@@ -38,15 +38,13 @@
 		"format:check": "prettier --check .",
 		"lint": "eslint src",
 		"test": "tsx --test --experimental-test-coverage",
-		"build": "npx build --package=@zenfs/core --globalName ZenFS_ZIP --entry src/index.ts",
+		"build": "tsc -p tsconfig.json",
 		"build:docs": "typedoc --out docs --name 'ZenFS Zip' src/index.ts",
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.12.0",
-		"@fal-works/esbuild-plugin-global-externals": "^2.1.2",
 		"@types/node": "^20.12.7",
-		"esbuild": "^0.24.0",
 		"eslint": "^9.12.0",
 		"globals": "^15.10.0",
 		"prettier": "^3.2.5",
