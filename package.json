@@ -58,6 +58,6 @@
 		"@zenfs/core": "^1.0.2"
 	},
 	"dependencies": {
-		"utilium": "^0.7.1"
+		"utilium": "^1.0.0"
 	}
 }
