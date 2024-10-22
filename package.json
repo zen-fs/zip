@@ -2,6 +2,10 @@
 	"name": "@zenfs/iso",
 	"version": "0.3.1",
 	"description": "Iso backend for ZenFS",
+	"funding": {
+		"type": "individual",
+		"url": "https://github.com/sponsors/james-pre"
+	},
 	"main": "dist/index.js",
 	"types": "src/index.ts",
 	"keywords": [
