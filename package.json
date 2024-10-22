@@ -2,6 +2,10 @@
 	"name": "@zenfs/zip",
 	"version": "0.5.1",
 	"description": "Zip backend for ZenFS",
+	"funding": {
+		"type": "individual",
+		"url": "https://github.com/sponsors/james-pre"
+	},
 	"main": "dist/index.js",
 	"types": "src/index.ts",
 	"keywords": [
