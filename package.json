@@ -59,7 +59,7 @@
 		"typescript-eslint": "^8.8.0"
 	},
 	"peerDependencies": {
-		"@zenfs/core": "^1.0.2"
+		"@zenfs/core": "^1.1.0"
 	},
 	"dependencies": {
 		"utilium": "^1.0.0"
