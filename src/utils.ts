@@ -85,7 +85,7 @@ export class ShortFormDate {
 	@t.uint8 public offsetFromGMT!: number;
 
 	public get date(): Date {
-		return new Date(this.year, this.month - 1, this.day, this.hour, this.minute, this.second);
+		return new Date(1900 + this.year, this.month - 1, this.day, this.hour, this.minute, this.second);
 	}
 }
 
