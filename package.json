@@ -1,6 +1,6 @@
 {
 	"name": "@zenfs/iso",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"description": "Iso backend for ZenFS",
 	"funding": {
 		"type": "individual",
