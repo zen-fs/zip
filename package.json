@@ -29,7 +29,6 @@
 	},
 	"files": [
 		"dist",
-		"src",
 		"license.md",
 		"tsconfig.json"
 	],
@@ -59,7 +58,7 @@
 		"typescript-eslint": "^8.8.0"
 	},
 	"peerDependencies": {
-		"@zenfs/core": "^1.1.0"
+		"@zenfs/core": "^1.2.0"
 	},
 	"dependencies": {
 		"utilium": "^1.0.0"

@@ -1,17 +1,17 @@
 name: Release
-
 on:
     release:
         types: [created]
-
 jobs:
     ci:
         name: CI
-        uses: zen-fs/core/.github/workflows/ci.yaml@main
-        permissions:
-            contents: read
-            id-token: write
+        uses: ./.github/workflows/ci.yaml
+    docs:
+        name: Docs
+        uses: zen-fs/core/.github/workflows/deploy-docs.yaml@main
+        needs: ci
     release:
         name: Release
-        uses: zen-fs/core/.github/workflows/release.yaml@main
+        uses: zen-fs/core/.github/workflows/release-common.yaml@main
+        needs: ci
         secrets: inherit

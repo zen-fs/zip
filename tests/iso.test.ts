@@ -1,3 +1,4 @@
+/* This test suite tests the functionality of exclusively the backend */
 import { configureSingle, fs } from '@zenfs/core';
 import { readFileSync } from 'fs';
 import assert from 'node:assert';
