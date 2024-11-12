@@ -1,4 +1,4 @@
-import { decode } from '@zenfs/core';
+import { decodeUTF8 } from '@zenfs/core';
 import { deserialize, sizeof, struct, types as t, type Tuple } from 'utilium';
 import { SLComponentRecord } from './SLComponentRecord.js';
 import { LongFormDate, ShortFormDate } from './utils.js';
@@ -40,7 +40,7 @@ class SystemUseEntry {
 	@t.uint16 public signature!: EntrySignature;
 
 	public get signatureString(): string {
-		return decode(this.data.slice(0, 2));
+		return decodeUTF8(this.data.slice(0, 2));
 	}
 
 	@t.uint8 public length!: number;
@@ -116,16 +116,16 @@ export class EREntry extends SystemUseEntry {
 	@t.uint8 public extensionVersion!: number;
 
 	public get extensionIdentifier(): string {
-		return decode(this.data.slice(8, 8 + this.idLength));
+		return decodeUTF8(this.data.slice(8, 8 + this.idLength));
 	}
 
 	public get extensionDescriptor(): string {
-		return decode(this.data.slice(8 + this.idLength, 8 + this.idLength + this.descriptorLength));
+		return decodeUTF8(this.data.slice(8 + this.idLength, 8 + this.idLength + this.descriptorLength));
 	}
 
 	public get extensionSource(): string {
 		const start = 8 + this.idLength + this.descriptorLength;
-		return decode(this.data.slice(start, start + this.sourceLength));
+		return decodeUTF8(this.data.slice(start, start + this.sourceLength));
 	}
 }
 

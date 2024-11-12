@@ -1,4 +1,4 @@
-import { decode } from '@zenfs/core';
+import { decodeRaw } from '@zenfs/core';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
 import type { TextDecoder as TTextDecoder } from 'util';
 import { deserialize, member, struct, types as t } from 'utilium';
@@ -245,10 +245,9 @@ export class SupplementaryVolumeDescriptor extends PrimaryOrSupplementaryVolumeD
 		if (this.type !== VolumeDescriptorType.Supplementary) {
 			throw new ErrnoError(Errno.EIO, 'Invalid supplementary volume descriptor.');
 		}
-		// Third character identifies what 'level' of the UCS specification to follow.
-		// We ignore it.
+		// Third character identifies what 'level' of the UCS specification to follow. We ignore it.
 		if (this.escapeSequence[0] !== 37 || this.escapeSequence[1] !== 47 || ![64, 67, 69].includes(this.escapeSequence[2])) {
-			throw new ErrnoError(Errno.EIO, 'Unrecognized escape sequence for SupplementaryVolumeDescriptor: ' + decode(this.escapeSequence));
+			throw new ErrnoError(Errno.EIO, 'Unrecognized escape sequence for SupplementaryVolumeDescriptor: ' + decodeRaw(this.escapeSequence));
 		}
 	}
 }
