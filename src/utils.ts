@@ -1,4 +1,4 @@
-import { decode } from '@zenfs/core/utils.js';
+import { decodeUTF8 } from '@zenfs/core/utils.js';
 
 /**
  * Converts the input `time` and `date` in MS-DOS format into a `Date`.
@@ -169,7 +169,7 @@ export function safeDecode(buffer: ArrayBufferLike | ArrayBufferView, utf8: bool
 
 	const uintArray = new Uint8Array('buffer' in buffer ? buffer.buffer : buffer).slice(start, start + length);
 	if (utf8) {
-		return decode(uintArray);
+		return decodeUTF8(uintArray);
 	} else {
 		return [...uintArray].map(char => (char > 127 ? extendedASCIIChars[char - 128] : String.fromCharCode(char))).join('');
 	}
