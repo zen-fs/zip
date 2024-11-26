@@ -35,3 +35,9 @@ jobs:
 
             - name: Build
               run: npm run build
+
+            - name: Backend-only Tests
+              run: npm test
+
+            - name: Unit tests (Iso)
+              run: npx zenfs-test tests/setup.ts
