@@ -1,23 +1,23 @@
-# ZenFS Zip Backend
+# ZenFS Archive Backends
 
-[ZenFS](https://github.com/zen-fs/core) backend for Zip files.
+[ZenFS](https://github.com/zen-fs/core) backends for archive files.
 
-Please read the ZenFS documentation!
+This packages adds a few backends:
 
-## Backend
+- `Zip` allows you to create a _readonly_ file system from a zip file.
+- `Iso` allows you to create a _readonly_ file system from a `.iso` file.
 
-This package adds the `Zip` backend, which allows you to create a _readonly_ file system from a zip file.
+For more information, see the [API documentation](https://zenfs.dev/archives).
 
-For more information, see the [API documentation](https://zen-fs.github.io/zip).
+> [!IMPORTANT]
+> Please read the ZenFS core documentation!
 
 ## Usage
 
-> [!NOTE]
-> The examples are written in ESM.  
-> For CJS, you can `require` the package.  
-> If using a browser environment, you can use a `<script>` with `type=module` (you may need to use import maps)
+The easiest way to get started is by looking at these examples
 
-You can't use `Zip` on its own. You must import the core in order to use the backend.
+
+#### `Zip`
 
 ```js
 import { configure, fs } from '@zenfs/core';
@@ -34,31 +34,8 @@ await configure({
 const contents = fs.readFileSync('/mnt/zip/in-archive.txt', 'utf-8');
 console.log(contents);
 ```
-# ZenFS `iso` Backend
 
-[ZenFS](https://github.com/zen-fs/core) backend for `iso` files.
-
-> [!IMPORTANT]
-> Please read the ZenFS core documentation!
-
-## Backend
-
-This package adds the `Iso` backend, which allows you to create a _readonly_ file system from a `.iso` file.
-
-For more information, see the [API documentation](https://zen-fs.github.io/iso).
-
-## Installing
-
-```sh
-npm install @zenfs/iso
-```
-
-## Usage
-
-> [!NOTE]
-> The examples are written in ESM.  
-> For CJS, you can `require` the package.  
-> If using a browser environment, you can use a `<script>` with `type=module` (you may need to use import maps)
+#### `Iso`
 
 ```js
 import { configure, fs } from '@zenfs/core';
@@ -78,7 +55,7 @@ console.log(contents);
 
 #### Note
 
-This implementation uses information on the ISO 9660 / ECMA 119 format/standard from:
+The `Iso` implementation uses information on the ISO9660/ECMA119 standards from:
 
 -   https://wiki.osdev.org/ISO_9660
 -   https://www.ecma-international.org/wp-content/uploads/ECMA-119_4th_edition_june_2019.pdf

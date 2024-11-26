@@ -58,7 +58,7 @@
 		"typescript-eslint": "^8.8.1"
 	},
 	"peerDependencies": {
-		"@zenfs/core": "^1.0.11"
+		"@zenfs/core": "^1.2.0"
 	},
 	"dependencies": {
 		"fflate": "^0.8.2",
