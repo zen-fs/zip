@@ -1,6 +1,5 @@
 import { decodeRaw } from '@zenfs/core';
 import { Errno, ErrnoError } from '@zenfs/core/error.js';
-import type { TextDecoder as TTextDecoder } from 'util';
 import { deserialize, member, struct, types as t } from 'utilium';
 import { DirectoryRecord } from './DirectoryRecord.js';
 import { LongFormDate } from './utils.js';
@@ -35,7 +34,7 @@ export abstract class PrimaryOrSupplementaryVolumeDescriptor extends VolumeDescr
 		deserialize(this, _data);
 	}
 
-	protected _decoder?: TTextDecoder;
+	protected _decoder?: TextDecoder;
 
 	protected _decode(data: Uint8Array): string {
 		this._decoder ||= new TextDecoder(this.name == 'Joilet' ? 'utf-16be' : 'utf-8');

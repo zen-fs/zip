@@ -210,7 +210,7 @@ export class IsoFS extends Readonly(Sync(FileSystem)) {
 	}
 }
 
-export const _Iso = {
+const _Iso = {
 	name: 'Iso',
 
 	isAvailable(): boolean {

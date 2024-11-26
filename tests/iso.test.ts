@@ -5,7 +5,7 @@ import assert from 'node:assert';
 import { suite, test } from 'node:test';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { Iso } from '../src/IsoFS.js';
+import { Iso } from '../dist/iso/fs.js';
 
 suite('Basic ISO9660 operations', () => {
 	test('Configure', async () => {

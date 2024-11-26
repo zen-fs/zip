@@ -1,7 +1,7 @@
 {
-	"name": "@zenfs/zip",
-	"version": "0.5.2",
-	"description": "Zip backend for ZenFS",
+	"name": "@zenfs/archives",
+	"version": "0.0.0",
+	"description": "ZenFS archive backends",
 	"funding": {
 		"type": "individual",
 		"url": "https://github.com/sponsors/james-pre"
@@ -14,15 +14,15 @@
 		"storage"
 	],
 	"type": "module",
-	"homepage": "https://github.com/zen-fs/zip",
+	"homepage": "https://github.com/zen-fs/archives",
 	"author": "James Prevett <jp@jamespre.dev> (https://jamespre.dev)",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/zen-fs/zip.git"
+		"url": "git+https://github.com/zen-fs/archives.git"
 	},
 	"bugs": {
-		"url": "https://github.com/zen-fs/zip/issues"
+		"url": "https://github.com/zen-fs/archives/issues"
 	},
 	"engines": {
 		"node": ">= 18"
@@ -43,7 +43,7 @@
 		"lint": "eslint src",
 		"test": "tsx --test --experimental-test-coverage",
 		"build": "tsc -p tsconfig.json",
-		"build:docs": "typedoc --out docs --name 'ZenFS Zip' src/index.ts",
+		"build:docs": "typedoc",
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {

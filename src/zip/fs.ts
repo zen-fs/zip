@@ -217,7 +217,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 	}
 }
 
-export const _Zip = {
+const _Zip = {
 	name: 'Zip',
 
 	options: {

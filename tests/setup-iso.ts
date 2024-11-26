@@ -1,6 +1,6 @@
 import { configureSingle, InMemory, Overlay } from '@zenfs/core';
 import { readFileSync } from 'node:fs';
-import { Iso } from '../src/IsoFS.js';
+import { Iso } from '../dist/iso/fs.js';
 
 await configureSingle({
 	backend: Overlay,

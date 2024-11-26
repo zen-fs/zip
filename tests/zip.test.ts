@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import { suite, test } from 'node:test';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { Zip } from '../src/ZipFS.js';
+import { Zip } from '../dist/zip/fs.js';
 
 suite('Basic ZIP operations', () => {
 	test('Configure', async () => {

@@ -6,7 +6,6 @@ import { FileFlags, rockRidgeIdentifier } from './constants.js';
 import type { SystemUseEntry } from './entries.js';
 import { CLEntry, EREntry, NMEntry, NMFlags, RREntry, SLEntry, SPEntry, constructSystemUseEntries } from './entries.js';
 import { ShortFormDate } from './utils.js';
-import type { TextDecoder as TTextDecoder } from 'util';
 
 @struct()
 export class DirectoryRecord {
@@ -204,7 +203,7 @@ export class DirectoryRecord {
 		return this._decode(this.data);
 	}
 
-	private _decoder?: TTextDecoder;
+	private _decoder?: TextDecoder;
 
 	protected get _decode() {
 		this._decoder ||= new TextDecoder(this._kind == 'Joliet' ? 'utf-16be' : 'utf-8');
