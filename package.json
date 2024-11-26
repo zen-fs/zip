@@ -1,7 +1,7 @@
 {
-	"name": "@zenfs/zip",
+	"name": "@lvcabral/zip",
 	"version": "0.5.2",
-	"description": "Zip backend for ZenFS",
+	"description": "Zip backend for ZenFS (with case sensitive mode option)",
 	"funding": {
 		"type": "individual",
 		"url": "https://github.com/sponsors/james-pre"
@@ -14,15 +14,18 @@
 		"storage"
 	],
 	"type": "module",
-	"homepage": "https://github.com/zen-fs/zip",
+	"homepage": "https://github.com/lvcabral/zip",
 	"author": "James Prevett <jp@jamespre.dev> (https://jamespre.dev)",
+	"contributors": [
+		"Marcelo Lv Cabral <marcelo@lvcabral.com>"
+	],
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/zen-fs/zip.git"
+		"url": "git+https://github.com/lvcabral/zip.git"
 	},
 	"bugs": {
-		"url": "https://github.com/zen-fs/zip/issues"
+		"url": "https://github.com/lvcabral/zip/issues"
 	},
 	"engines": {
 		"node": ">= 18"
@@ -58,7 +61,7 @@
 		"typescript-eslint": "^8.8.1"
 	},
 	"peerDependencies": {
-		"@zenfs/core": "^1.0.11"
+		"@zenfs/core": "^1.4.0"
 	},
 	"dependencies": {
 		"fflate": "^0.8.2",

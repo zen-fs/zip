@@ -23,9 +23,10 @@ export interface ZipOptions {
 	name?: string;
 
 	/**
-	 * Whether to wait to initialize entries
+	 * Whether the file system should be case sensitive. (optional)
+	 * Defaults to true.
 	 */
-	lazy?: boolean;
+	caseSensitive?: boolean;
 }
 
 /**
@@ -59,6 +60,7 @@ export interface ZipOptions {
  */
 export class ZipFS extends Readonly(Sync(FileSystem)) {
 	protected files: Map<string, FileEntry> = new Map();
+	protected names: Map<string, string> = new Map();
 	protected directories: Map<string, Set<string>> = new Map();
 
 	protected _time = Date.now();
@@ -99,7 +101,8 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 
 	public constructor(
 		public readonly name: string,
-		protected data: ArrayBufferLike
+		protected data: ArrayBufferLike,
+		protected caseSensitive: boolean,
 	) {
 		super();
 
@@ -124,14 +127,23 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 				throw new ErrnoError(Errno.EPERM, 'Unexpectedly encountered an absolute path in a zip file.');
 			}
 			// Strip the trailing '/' if it exists
-			const name = cd.name.endsWith('/') ? cd.name.slice(0, -1) : cd.name;
+			let name = cd.name.endsWith('/') ? cd.name.slice(0, -1) : cd.name;
+			if (!this.caseSensitive) {
+				this.names.set('/' + name.toLowerCase(), '/' + name);
+				name = name.toLowerCase();
+			}
 			this.files.set('/' + name, cd);
 			ptr += cd.size;
 		}
 
 		// Parse directory entries
 		for (const entry of this.files.keys()) {
-			const { dir, base } = parse(entry);
+			const name = this.names.get(entry) ?? entry;
+			let { dir, base } = parse(name);
+
+			if (!this.caseSensitive) {
+				dir = dir.toLowerCase();
+			}
 
 			if (!this.directories.has(dir)) {
 				this.directories.set(dir, new Set());
@@ -142,7 +154,12 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 
 		// Add subdirectories to their parent's entries
 		for (const entry of this.directories.keys()) {
-			const { dir, base } = parse(entry);
+			const name = this.names.get(entry) ?? entry;
+			let { dir, base } = parse(name);
+
+			if (!this.caseSensitive) {
+				dir = dir.toLowerCase();
+			}
 
 			if (base == '') continue;
 
@@ -168,8 +185,9 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 	}
 
 	public statSync(path: string): Stats {
+		const search = this.caseSensitive ? path : path.toLowerCase();
 		// The EOCD/Header does not track directories, so it does not exist in `entries`
-		if (this.directories.has(path)) {
+		if (this.directories.has(search)) {
 			return new Stats({
 				mode: 0o555 | S_IFDIR,
 				size: 4096,
@@ -180,7 +198,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			});
 		}
 
-		const entry = this.files.get(path);
+		const entry = this.files.get(search);
 
 		if (!entry) {
 			throw ErrnoError.With('ENOENT', path, 'stat');
@@ -196,8 +214,8 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 		}
 
 		const stats = this.statSync(path);
-
-		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : this.files.get(path)?.data);
+		const data = this.files.get(this.caseSensitive ? path : path.toLowerCase())?.data;
+		return new NoSyncFile(this, path, flag, stats, stats.isDirectory() ? stats.fileData : data);
 	}
 
 	public readdirSync(path: string): string[] {
@@ -207,7 +225,7 @@ export class ZipFS extends Readonly(Sync(FileSystem)) {
 			throw ErrnoError.With('ENOTDIR', path, 'readdir');
 		}
 
-		const entries = this.directories.get(path);
+		const entries = this.directories.get(this.caseSensitive ? path : path.toLowerCase());
 
 		if (!entries) {
 			throw ErrnoError.With('ENODATA', path, 'readdir');
@@ -236,6 +254,11 @@ export const _Zip = {
 			required: false,
 			description: 'The name of the zip file (optional).',
 		},
+		caseSensitive: {
+			type: 'boolean',
+			required: false,
+			description: 'Flag to configure the case. default is `true` (optional).',
+		},
 	},
 
 	isAvailable(): boolean {
@@ -243,7 +266,7 @@ export const _Zip = {
 	},
 
 	create(options: ZipOptions): ZipFS {
-		return new ZipFS(options.name ?? '', options.data);
+		return new ZipFS(options.name ?? '', options.data, options.caseSensitive ?? true);
 	},
 } satisfies Backend<ZipFS, ZipOptions>;
 type _Zip = typeof _Zip;
