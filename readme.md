@@ -4,8 +4,8 @@
 
 This packages adds a few backends:
 
-- `Zip` allows you to create a _readonly_ file system from a zip file.
-- `Iso` allows you to create a _readonly_ file system from a `.iso` file.
+-   `Zip` allows you to create a _readonly_ file system from a zip file.
+-   `Iso` allows you to create a _readonly_ file system from a `.iso` file.
 
 For more information, see the [API documentation](https://zenfs.dev/archives).
 
@@ -15,7 +15,6 @@ For more information, see the [API documentation](https://zenfs.dev/archives).
 ## Usage
 
 The easiest way to get started is by looking at these examples
-
 
 #### `Zip`
 
