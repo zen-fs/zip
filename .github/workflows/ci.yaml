@@ -40,4 +40,4 @@ jobs:
               run: npm test
 
             - name: Unit tests (Iso)
-              run: npx zenfs-test tests/setup.ts
+              run: npx zenfs-test tests/setup-iso.ts
