@@ -215,7 +215,7 @@ export class DirectoryRecord {
 	}
 
 	protected _rockRidgeFilename(isoData: Uint8Array): string | null {
-		const nmEntries = this.getSUEntries(isoData).filter(e => e instanceof NMEntry) as NMEntry[];
+		const nmEntries = this.getSUEntries(isoData).filter(e => e instanceof NMEntry);
 		if (nmEntries.length === 0 || nmEntries[0].flags & (NMFlags.CURRENT | NMFlags.PARENT)) {
 			return null;
 		}
