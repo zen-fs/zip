@@ -8,7 +8,7 @@ import { Zip } from '../dist/zip/fs.js';
 
 suite('Basic ZIP operations', () => {
 	test('Configure', async () => {
-		const buffer = readFileSync(dirname(fileURLToPath(import.meta.url)) + '/data.zip');
+		const buffer = readFileSync(dirname(fileURLToPath(import.meta.url)) + '/files/data.zip');
 		const data = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 		await configureSingle({ backend: Zip, data });
 	});

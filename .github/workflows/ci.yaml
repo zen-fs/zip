@@ -39,5 +39,11 @@ jobs:
             - name: Backend-only Tests
               run: npm test
 
+            - name: Unit tests (common)
+              run: npx zenfs-test --common
+
+            - name: Unit tests (Zip)
+              run: npx zenfs-test tests/setup-zip.ts
+
             - name: Unit tests (Iso)
               run: npx zenfs-test tests/setup-iso.ts

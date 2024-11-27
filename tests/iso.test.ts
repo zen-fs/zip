@@ -9,7 +9,7 @@ import { Iso } from '../dist/iso/fs.js';
 
 suite('Basic ISO9660 operations', () => {
 	test('Configure', async () => {
-		const data = readFileSync(dirname(fileURLToPath(import.meta.url)) + '/data.iso');
+		const data = readFileSync(dirname(fileURLToPath(import.meta.url)) + '/files/data.iso');
 		//const data = buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 		await configureSingle({ backend: Iso, data });
 	});

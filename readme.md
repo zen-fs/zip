@@ -20,7 +20,7 @@ The easiest way to get started is by looking at these examples
 
 ```js
 import { configure, fs } from '@zenfs/core';
-import { Zip } from '@zenfs/zip';
+import { Zip } from '@zenfs/archives';
 
 const res = await fetch('http://example.com/archive.zip');
 
@@ -38,7 +38,7 @@ console.log(contents);
 
 ```js
 import { configure, fs } from '@zenfs/core';
-import { Iso } from '@zenfs/iso';
+import { Iso } from '@zenfs/archives';
 
 const res = await fetch('http://example.com/image.iso');
 

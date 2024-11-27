@@ -5,3 +5,4 @@ docs
 *.log
 tmp
 build
+.coverage
