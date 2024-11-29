@@ -1,6 +1,6 @@
 {
 	"name": "@lvcabral/zip",
-	"version": "0.5.2",
+	"version": "0.5.3",
 	"description": "Zip backend for ZenFS (with case sensitive mode option)",
 	"funding": {
 		"type": "individual",
