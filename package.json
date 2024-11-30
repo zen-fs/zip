@@ -33,9 +33,7 @@
 	},
 	"files": [
 		"dist",
-		"src",
-		"license.md",
-		"tsconfig.json"
+		"license.md"
 	],
 	"scripts": {
 		"format": "prettier --write .",
