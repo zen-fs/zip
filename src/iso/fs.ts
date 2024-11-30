@@ -221,7 +221,6 @@ const _Iso = {
 		data: {
 			type: 'object',
 			required: true,
-			description: 'The ISO file in a buffer',
 			validator(arg: unknown) {
 				if (!(arg instanceof Uint8Array)) {
 					throw new TypeError('data is not an Uint8Array');
@@ -236,5 +235,5 @@ const _Iso = {
 } as const satisfies Backend<IsoFS, IsoOptions>;
 type _Iso = typeof _Iso;
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface Iso extends _Iso {}
+export interface Iso extends _Iso {}
 export const Iso: Iso = _Iso;

@@ -224,18 +224,13 @@ const _Zip = {
 		data: {
 			type: 'object',
 			required: true,
-			description: 'The zip file as an ArrayBuffer object.',
 			validator(buff: unknown) {
 				if (!(buff instanceof ArrayBuffer)) {
 					throw new ErrnoError(Errno.EINVAL, 'option must be a ArrayBuffer.');
 				}
 			},
 		},
-		name: {
-			type: 'string',
-			required: false,
-			description: 'The name of the zip file (optional).',
-		},
+		name: { type: 'string', required: false },
 	},
 
 	isAvailable(): boolean {
@@ -248,5 +243,5 @@ const _Zip = {
 } satisfies Backend<ZipFS, ZipOptions>;
 type _Zip = typeof _Zip;
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface Zip extends _Zip {}
+export interface Zip extends _Zip {}
 export const Zip: Zip = _Zip;
