@@ -9,8 +9,7 @@ This packages adds a few backends:
 
 For more information, see the [API documentation](https://zenfs.dev/archives).
 
-> [!IMPORTANT]
-> Please read the ZenFS core documentation!
+Please read the ZenFS core documentation!
 
 ## Usage
 
@@ -52,9 +51,4 @@ const contents = fs.readFileSync('/mnt/iso/in-image.txt', 'utf-8');
 console.log(contents);
 ```
 
-#### Note
-
-The `Iso` implementation uses information on the ISO9660/ECMA119 standards from:
-
--   https://wiki.osdev.org/ISO_9660
--   https://www.ecma-international.org/wp-content/uploads/ECMA-119_4th_edition_june_2019.pdf
+The `Iso` implementation uses information from [the OS Dev Wiki](https://wiki.osdev.org/ISO_9660) and [ECMA 119](https://www.ecma-international.org/wp-content/uploads/ECMA-119_4th_edition_june_2019.pdf).
