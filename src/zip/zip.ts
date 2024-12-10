@@ -35,8 +35,8 @@ export enum AttributeCompat {
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.7
  */
 @struct()
-export class LocalFileHeader {
-	public constructor(protected data: ArrayBufferLike) {
+export class LocalFileHeader<T extends ArrayBufferLike = ArrayBufferLike> {
+	public constructor(protected data: T) {
 		deserialize(this, data);
 		if (this.signature !== 0x04034b50) {
 			throw new ErrnoError(Errno.EINVAL, 'Invalid Zip file: Local file header has invalid signature: ' + this.signature);
@@ -122,9 +122,9 @@ export class LocalFileHeader {
 	 * This should be used for storage expansion.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.28
 	 */
-	public get extra(): ArrayBuffer {
+	public get extra(): T {
 		const start = 30 + this.nameLength;
-		return this.data.slice(start, start + this.extraLength);
+		return this.data.slice(start, start + this.extraLength) as T;
 	}
 
 	public get size(): number {
@@ -141,12 +141,12 @@ export class LocalFileHeader {
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.11
  */
 @struct()
-export class ExtraDataRecord {
+export class ExtraDataRecord<T extends ArrayBufferLike = ArrayBufferLike> {
 	@t.uint32 public signature!: number;
 
 	@t.uint32 public length!: number;
 
-	public constructor(public readonly data: ArrayBufferLike) {
+	public constructor(public readonly data: T) {
 		deserialize(this, data);
 		if (this.signature != 0x08064b50) {
 			throw new ErrnoError(Errno.EINVAL, 'Invalid archive extra data record signature: ' + this.signature);
@@ -157,8 +157,8 @@ export class ExtraDataRecord {
 	 * This should be used for storage expansion.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.28
 	 */
-	public get extraField(): ArrayBuffer {
-		return this.data.slice(8, 8 + this.length);
+	public get extraField(): T {
+		return this.data.slice(8, 8 + this.length) as T;
 	}
 }
 
@@ -169,15 +169,15 @@ export class ExtraDataRecord {
 export const sizeof_FileEntry = 46;
 
 /**
- * Refered to as a "central directory" record in the spec.
+ * Referred to as a "central directory" record in the spec.
  * This is a file metadata entry inside the "central directory".
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.12
  */
 @struct()
-export class FileEntry {
+export class FileEntry<T extends ArrayBufferLike = ArrayBufferLike> {
 	public constructor(
 		protected zipData: ArrayBufferLike,
-		protected _data: ArrayBufferLike
+		protected _data: T
 	) {
 		deserialize(this, _data);
 		// Sanity check.
@@ -327,9 +327,9 @@ export class FileEntry {
 	 * This should be used for storage expansion.
 	 * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.4.28
 	 */
-	public get extra(): ArrayBuffer {
+	public get extra(): T {
 		const offset = 44 + this.nameLength;
-		return this._data.slice(offset, offset + this.extraLength);
+		return this._data.slice(offset, offset + this.extraLength) as T;
 	}
 
 	/**
@@ -397,8 +397,8 @@ export class FileEntry {
  * @see http://pkware.com/documents/casestudies/APPNOTE.TXT#:~:text=4.3.13
  */
 @struct()
-export class DigitalSignature {
-	public constructor(protected data: ArrayBufferLike) {
+export class DigitalSignature<T extends ArrayBufferLike = ArrayBufferLike> {
+	public constructor(protected data: T) {
 		deserialize(this, data);
 		if (this.signature != 0x05054b50) {
 			throw new ErrnoError(Errno.EINVAL, 'Invalid digital signature signature: ' + this.signature);
@@ -409,8 +409,8 @@ export class DigitalSignature {
 
 	@t.uint16 public size!: number;
 
-	public get signatureData(): ArrayBuffer {
-		return this.data.slice(6, 6 + this.size);
+	public get signatureData(): T {
+		return this.data.slice(6, 6 + this.size) as T;
 	}
 }
 
