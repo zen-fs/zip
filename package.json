@@ -61,6 +61,6 @@
 	},
 	"dependencies": {
 		"fflate": "^0.8.2",
-		"utilium": "^1.0.0"
+		"utilium": "^1.1.2"
 	}
 }
