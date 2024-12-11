@@ -141,39 +141,37 @@ export class DirectoryRecord {
 		return this.hasRockRidge && this.getSUEntries(isoData).filter(e => e instanceof SLEntry).length > 0;
 	}
 
+	/**
+	 * @todo Use a `switch` when checking flags?
+	 */
 	public getSymlinkPath(isoData: Uint8Array): string {
-		let p = '';
+		let path = '';
 		const entries = this.getSUEntries(isoData);
 		for (const entry of entries) {
-			if (entry instanceof SLEntry) {
-				const components = entry.componentRecords;
-				for (const component of components) {
-					const flags = component.flags;
-					if (flags & SLComponentFlags.CURRENT) {
-						p += './';
-					} else if (flags & SLComponentFlags.PARENT) {
-						p += '@zenfs/core/';
-					} else if (flags & SLComponentFlags.ROOT) {
-						p += '/';
-					} else {
-						p += component.content(this._decode);
-						if (!(flags & SLComponentFlags.CONTINUE)) {
-							p += '/';
-						}
+			if (!(entry instanceof SLEntry)) continue;
+
+			const components = entry.componentRecords;
+			for (const component of components) {
+				const flags = component.flags;
+				if (flags & SLComponentFlags.CURRENT) {
+					path += './';
+				} else if (flags & SLComponentFlags.PARENT) {
+					path += '../';
+				} else if (flags & SLComponentFlags.ROOT) {
+					path += '/';
+				} else {
+					path += component.content(this._decode);
+					if (!(flags & SLComponentFlags.CONTINUE)) {
+						path += '/';
 					}
 				}
-				if (!entry.continueFlag) {
-					// We are done with this link.
-					break;
-				}
 			}
+			// We are done with this link.
+
+			if (!entry.continueFlag) break;
 		}
-		if (p.length > 1 && p[p.length - 1] === '/') {
-			// Trim trailing '/'.
-			return p.slice(0, p.length - 1);
-		} else {
-			return p;
-		}
+
+		return path.endsWith('/') ? path.slice(0, -1) : path;
 	}
 
 	public getFile(isoData: Uint8Array): Uint8Array {
